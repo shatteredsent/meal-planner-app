@@ -3,6 +3,7 @@ import 'plan_tab.dart';
 import 'recipes_tab.dart';
 import 'shopping_list_tab.dart';
 import 'weekly_schedule_tab.dart';
+import 'profile_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const RecipesTab(),
     const ShoppingListTab(),
     const WeeklyScheduleTab(),
+    const ProfileTab(),
   ];
 
   @override
@@ -51,6 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.view_week),
             label: 'Weekly Schedule',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

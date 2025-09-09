@@ -173,3 +173,70 @@ class ShoppingListItem {
     };
   }
 }
+
+// Add this class to the end of your lib/models/models.dart file
+
+class UserProfile {
+  final String id;
+  final String email;
+  final String displayName;
+  final String? profileImageUrl;
+  final Map<String, dynamic> preferences;
+  final DateTime createdAt;
+  final DateTime lastLoginAt;
+
+  UserProfile({
+    required this.id,
+    required this.email,
+    required this.displayName,
+    this.profileImageUrl,
+    required this.preferences,
+    required this.createdAt,
+    required this.lastLoginAt,
+  });
+
+  factory UserProfile.fromMap(Map<String, dynamic> map, String id) {
+    return UserProfile(
+      id: id,
+      email: map['email']?.toString() ?? '',
+      displayName: map['displayName']?.toString() ?? '',
+      profileImageUrl: map['profileImageUrl']?.toString(),
+      preferences: Map<String, dynamic>.from(map['preferences'] ?? {}),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        map['createdAt'] ?? DateTime.now().millisecondsSinceEpoch,
+      ),
+      lastLoginAt: DateTime.fromMillisecondsSinceEpoch(
+        map['lastLoginAt'] ?? DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'email': email,
+      'displayName': displayName,
+      'profileImageUrl': profileImageUrl,
+      'preferences': preferences,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'lastLoginAt': lastLoginAt.millisecondsSinceEpoch,
+    };
+  }
+
+  UserProfile copyWith({
+    String? email,
+    String? displayName,
+    String? profileImageUrl,
+    Map<String, dynamic>? preferences,
+    DateTime? lastLoginAt,
+  }) {
+    return UserProfile(
+      id: id,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      preferences: preferences ?? this.preferences,
+      createdAt: createdAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+    );
+  }
+}
