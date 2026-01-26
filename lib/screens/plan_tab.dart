@@ -99,10 +99,16 @@ class _PlanTabState extends State<PlanTab> {
   }
 
   Widget _buildMealItem(Meal meal) {
+    // For "Meat and Two Sides" meals, the meat is stored as the first ingredient.
+    // Use that as the title instead of the generic "Meat and Two Sides" string.
+    final String displayTitle = (meal.isMeatAndTwoVeggies && meal.ingredients.isNotEmpty)
+        ? meal.ingredients.first
+        : meal.recipeName;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
-        title: Text(meal.recipeName),
+        title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -308,11 +314,13 @@ class _PlanTabState extends State<PlanTab> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              context.read<MealProvider>().deleteMeal(meal.id);
-              context.read<ShoppingListProvider>().removeItemsForMeal(meal.id);
-              Navigator.of(context).pop();
-            },
+              onPressed: () async {
+                await context.read<MealProvider>().deleteMeal(meal.id);
+                if (context.mounted) {
+                  _updateShoppingList();
+                  Navigator.of(context).pop();
+                }
+              },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
           ),

@@ -158,13 +158,15 @@ class _WeeklyScheduleTabState extends State<WeeklyScheduleTab> {
           ),
           const SizedBox(height: 4),
           Text(
-            meal.recipeName,
+            (meal.isMeatAndTwoVeggies && meal.ingredients.isNotEmpty) 
+                ? '${meal.ingredients.first} w/ ${meal.sides.join(" & ")}'
+                : meal.recipeName,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
-          if (meal.sides.isNotEmpty) ...[
+          if (meal.sides.isNotEmpty && !meal.isMeatAndTwoVeggies) ...[
             const SizedBox(height: 4),
             Text(
               'Sides: ${meal.sides.join(', ')}',

@@ -33,21 +33,40 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: 'Meal Planner',
             theme: ThemeData(
-              primarySwatch: Colors.green,
               useMaterial3: true,
               brightness: Brightness.light,
               colorScheme: ColorScheme.fromSeed(
                 seedColor: Colors.green,
+                primary: Colors.green.shade600,
+                secondary: Colors.teal.shade400,
                 brightness: Brightness.light,
+              ),
+              cardTheme: CardThemeData(
+                elevation: 0.0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(color: Colors.grey.shade200, width: 1.0),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
               ),
             ),
             darkTheme: ThemeData(
-              primarySwatch: Colors.green,
               useMaterial3: true,
               brightness: Brightness.dark,
               colorScheme: ColorScheme.fromSeed(
                 seedColor: Colors.green,
+                primary: Colors.green.shade400,
+                secondary: Colors.teal.shade200,
                 brightness: Brightness.dark,
+                surface: const Color(0xFF1E1E1E),
+              ),
+              cardTheme: CardThemeData(
+                elevation: 0.0,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(color: Colors.grey.shade800, width: 1.0),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
               ),
             ),
             themeMode:

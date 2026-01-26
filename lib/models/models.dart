@@ -143,15 +143,15 @@ class ShoppingListItem {
   final String id;
   final String name;
   final bool isChecked;
-  final String mealId;
-  final String dayOfWeek;
+  final String category;
+  final int quantity;
 
   ShoppingListItem({
     required this.id,
     required this.name,
     required this.isChecked,
-    required this.mealId,
-    required this.dayOfWeek,
+    required this.category,
+    this.quantity = 1,
   });
 
   factory ShoppingListItem.fromMap(Map<String, dynamic> map, String id) {
@@ -159,8 +159,8 @@ class ShoppingListItem {
       id: id,
       name: map['name']?.toString() ?? '',
       isChecked: map['isChecked'] == true,
-      mealId: map['mealId']?.toString() ?? '',
-      dayOfWeek: map['dayOfWeek']?.toString() ?? '',
+      category: map['category']?.toString() ?? 'Other',
+      quantity: (map['quantity'] as int?) ?? 1,
     );
   }
 
@@ -168,8 +168,8 @@ class ShoppingListItem {
     return {
       'name': name,
       'isChecked': isChecked,
-      'mealId': mealId,
-      'dayOfWeek': dayOfWeek,
+      'category': category,
+      'quantity': quantity,
     };
   }
 }
