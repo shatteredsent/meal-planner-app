@@ -28,15 +28,25 @@ class MealProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      final querySnapshot = await _firestore.collection('meals').get();
-      _meals = querySnapshot.docs
-          .map((doc) => Meal.fromMap(doc.data(), doc.id))
-          .toList();
-    } catch (e) {
-      print('Error loading meals: $e');
+    int retries = 3;
+    while (retries > 0) {
+      try {
+        final querySnapshot = await _firestore.collection('meals').get();
+        _meals = querySnapshot.docs
+            .map((doc) => Meal.fromMap(doc.data(), doc.id))
+            .toList();
+        break; // Success
+      } catch (e) {
+        retries--;
+        if (retries == 0) {
+          print('Firestore error after retries: $e');
+          _meals = [];
+        } else {
+          print('Firestore load failed, retrying ($retries left)...');
+          await Future.delayed(const Duration(seconds: 1));
+        }
+      }
     }
-
     _isLoading = false;
     notifyListeners();
   }
@@ -57,7 +67,7 @@ class MealProvider with ChangeNotifier {
       _meals.add(newMeal);
       notifyListeners();
     } catch (e) {
-      print('Error adding meal: $e');
+      print('Firestore error adding meal: $e');
     }
   }
 
@@ -71,7 +81,7 @@ class MealProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error updating meal: $e');
+      print('Firestore error updating meal: $e');
     }
   }
 
@@ -81,23 +91,27 @@ class MealProvider with ChangeNotifier {
       _meals.removeWhere((m) => m.id == mealId);
       notifyListeners();
     } catch (e) {
-      print('Error deleting meal: $e');
+      print('Firestore error deleting meal: $e');
     }
   }
 
   Future<void> addSideToMeal(String mealId, String side) async {
-    final meal = _meals.firstWhere((m) => m.id == mealId);
-    final updatedMeal = Meal(
-      id: meal.id,
-      recipeId: meal.recipeId,
-      recipeName: meal.recipeName,
-      dayOfWeek: meal.dayOfWeek,
-      mealType: meal.mealType,
-      sides: [...meal.sides, side],
-      ingredients: meal.ingredients,
-      isMeatAndTwoVeggies: meal.isMeatAndTwoVeggies,
-    );
-    await updateMeal(updatedMeal);
+    try {
+      final meal = _meals.firstWhere((m) => m.id == mealId);
+      final updatedMeal = Meal(
+        id: meal.id,
+        recipeId: meal.recipeId,
+        recipeName: meal.recipeName,
+        dayOfWeek: meal.dayOfWeek,
+        mealType: meal.mealType,
+        sides: [...meal.sides, side],
+        ingredients: meal.ingredients,
+        isMeatAndTwoVeggies: meal.isMeatAndTwoVeggies,
+      );
+      await updateMeal(updatedMeal);
+    } catch (e) {
+      print('Error adding side: $e');
+    }
   }
 
   List<Meal> getAllMealsForWeek() {

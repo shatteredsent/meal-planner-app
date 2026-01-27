@@ -8,12 +8,41 @@ import 'providers/recipe_provider.dart';
 import 'providers/shopping_list_provider.dart';
 import 'screens/home_screen.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 void main() async {
+  // Fix Flutter Web debug service null pointer issues
+  if (kIsWeb) {
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+  
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  
+  // Add 500ms delay for web platform stability before ANY platform channel calls
+  await Future.delayed(const Duration(milliseconds: 500));
+  
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    testFirebase();
+  } catch (e) {
+    print('Firebase initialization failed: $e');
+  }
+  
   runApp(const MyApp());
+}
+
+void testFirebase() async {
+  try {
+    final app = Firebase.app();
+    print('Firebase initialized: ${app.name}');
+    final auth = FirebaseAuth.instance;
+    print('Auth ready: ${auth.currentUser}');
+  } catch (e) {
+    print('Firebase test failed: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -31,46 +60,30 @@ class MyApp extends StatelessWidget {
       child: Consumer<ProfileProvider>(
         builder: (context, profileProvider, child) {
           return MaterialApp(
-            title: 'Meal Planner',
+            title: 'Meal Planner (Web)',
             theme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.light,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.green,
-                primary: Colors.green.shade600,
-                secondary: Colors.teal.shade400,
-                brightness: Brightness.light,
-              ),
-              cardTheme: CardThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+              cardTheme: const CardThemeData(
                 elevation: 0.0,
                 shape: RoundedRectangleBorder(
-                  side: BorderSide(color: Colors.grey.shade200, width: 1.0),
-                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Color(0xFFEEEEEE), width: 1.0),
                 ),
-                clipBehavior: Clip.antiAlias,
               ),
             ),
             darkTheme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.dark,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.green,
-                primary: Colors.green.shade400,
-                secondary: Colors.teal.shade200,
-                brightness: Brightness.dark,
-                surface: const Color(0xFF1E1E1E),
-              ),
-              cardTheme: CardThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.green, brightness: Brightness.dark),
+              cardTheme: const CardThemeData(
                 elevation: 0.0,
                 shape: RoundedRectangleBorder(
-                  side: BorderSide(color: Colors.grey.shade800, width: 1.0),
-                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Color(0xFF333333), width: 1.0),
                 ),
-                clipBehavior: Clip.antiAlias,
               ),
             ),
-            themeMode:
-                profileProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            themeMode: profileProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             home: const HomeScreen(),
             debugShowCheckedModeBanner: false,
           );

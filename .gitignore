@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Secrets and environment files
+.env
+.env.local
+.env.production
+*.secret
+*_secret.dart
+lib/config/secrets.dart
+
+# Firebase sensitive files
+google-services.json
+GoogleService-Info.plist
+

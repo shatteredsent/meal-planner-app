@@ -36,6 +36,39 @@ class _ShoppingListTabState extends State<ShoppingListTab> {
       extendBodyBehindAppBar: true, 
       appBar: AppBar(
         title: const Text('Shopping List'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+          ),
+          // ADDED ALEXA BUTTON:
+          Consumer<ShoppingListProvider>(
+            builder: (context, provider, child) {
+              final hasStaples = provider.items.any((item) => 
+                item.name.toLowerCase().contains('staples') ||
+                item.name.toLowerCase().contains('basic') ||
+                provider.items.length > 5 // Auto-trigger for larger lists
+              );
+              
+              if (hasStaples) {
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAlexaSyncDialog(),
+                    icon: const Icon(Icons.speaker, size: 18),
+                    label: const Text('Sync Alexa'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
         flexibleSpace: ClipRRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -47,12 +80,6 @@ class _ShoppingListTabState extends State<ShoppingListTab> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-          ),
-        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -122,6 +149,192 @@ class _ShoppingListTabState extends State<ShoppingListTab> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  void _showAlexaSyncDialog() async {
+    final provider = context.read<ShoppingListProvider>();
+    final isAuthenticated = await provider.isAlexaAuthenticated();
+    
+    if (!isAuthenticated) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.speaker, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Connect to Alexa'),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('To sync with your Alexa device, you need to sign in with your Amazon account.'),
+              SizedBox(height: 16),
+              Text('This will allow the app to add items to your Alexa shopping list.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showManualTokenDialog();
+              },
+              child: const Text('Manual Entry'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await provider.authenticateAlexa();
+              },
+              icon: const Icon(Icons.login),
+              label: const Text('Sign in with Amazon'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    
+    // Show sync dialog for authenticated users
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.speaker, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Sync with Alexa'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Sync ${provider.items.length} items to your Alexa shopping list?'),
+            const SizedBox(height: 16),
+            const Text('After syncing, try saying:', 
+                 style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('"Alexa, what\'s on my shopping list?"', 
+                 style: TextStyle(fontStyle: FontStyle.italic, color: Colors.blue)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              // Show loading
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                      SizedBox(width: 16),
+                      Text('Syncing to Alexa...'),
+                    ],
+                  ),
+                  duration: Duration(seconds: 10),
+                ),
+              );
+              
+              final success = await provider.syncToAlexa();
+              
+              // Clear loading snackbar
+              ScaffoldMessenger.of(context).clearSnackBars();
+              
+              // Show result
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(
+                        success ? Icons.check_circle : Icons.error,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(success 
+                        ? '✅ Successfully synced ${provider.items.length} items to Alexa!' 
+                        : '❌ Failed to sync to Alexa. Please try again.'),
+                    ],
+                  ),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            },
+            icon: const Icon(Icons.sync),
+            label: const Text('Sync Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showManualTokenDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Manual Alexa Connection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Paste the authorization code from the Amazon account linking page:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Authorization Code',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                final success = await context.read<ShoppingListProvider>().setAlexaAuthCode(controller.text);
+                if (mounted) {
+                  if (success) {
+                    Navigator.pop(context);
+                    _showAlexaSyncDialog(); 
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('❌ Invalid code. Please try again.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Connect'),
+          ),
+        ],
       ),
     );
   }
@@ -284,6 +497,16 @@ class _ShoppingItemCardState extends State<ShoppingItemCard> {
                         : null,
                   ),
                   const SizedBox(width: 16),
+                  if (widget.item.name.toLowerCase().contains('staples') ||
+                      widget.item.category == 'Essentials')
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(
+                        Icons.speaker_outlined,
+                        size: 16,
+                        color: theme.colorScheme.primary.withOpacity(0.7),
+                      ),
+                    ),
                   
                   // Text Content
                   Expanded(

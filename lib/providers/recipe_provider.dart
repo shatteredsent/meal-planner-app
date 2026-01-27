@@ -14,16 +14,26 @@ class RecipeProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
-      final querySnapshot = await _firestore.collection('recipes').get();
-      _recipes = querySnapshot.docs
-          .map((doc) => Recipe.fromMap(doc.data(), doc.id))
-          .toList();
-      print('Loaded ${_recipes.length} recipes'); // Debug output
-    } catch (e) {
-      print('Error loading recipes: $e');
+    int retries = 3;
+    while (retries > 0) {
+      try {
+        final querySnapshot = await _firestore.collection('recipes').get();
+        _recipes = querySnapshot.docs
+            .map((doc) => Recipe.fromMap(doc.data(), doc.id))
+            .toList();
+        print('Loaded ${_recipes.length} recipes'); // Debug output
+        break; // Success, exit loop
+      } catch (e) {
+        retries--;
+        if (retries == 0) {
+          print('Firestore error after retries: $e');
+          _recipes = [];
+        } else {
+          print('Firestore load failed, retrying ($retries left)...');
+          await Future.delayed(const Duration(seconds: 1));
+        }
+      }
     }
-
     _isLoading = false;
     notifyListeners();
   }
@@ -46,7 +56,7 @@ class RecipeProvider with ChangeNotifier {
       notifyListeners();
       print('Added recipe: ${recipe.name}'); // Debug output
     } catch (e) {
-      print('Error adding recipe: $e');
+      print('Firestore error adding recipe: $e');
     }
   }
 
@@ -64,7 +74,7 @@ class RecipeProvider with ChangeNotifier {
         print('Updated recipe: ${recipe.name}'); // Debug output
       }
     } catch (e) {
-      print('Error updating recipe: $e');
+      print('Firestore error updating recipe: $e');
     }
   }
 
@@ -76,7 +86,7 @@ class RecipeProvider with ChangeNotifier {
       notifyListeners();
       print('Deleted recipe: ${removedRecipe.name}'); // Debug output
     } catch (e) {
-      print('Error deleting recipe: $e');
+      print('Firestore error deleting recipe: $e');
     }
   }
 
@@ -84,27 +94,22 @@ class RecipeProvider with ChangeNotifier {
     try {
       return _recipes.firstWhere((recipe) => recipe.id == id);
     } catch (e) {
-      print('Recipe not found: $id');
       return null;
     }
   }
 
-  // Helper methods for filtering
   List<Recipe> getRecipesByCategory(String category) {
     return _recipes.where((recipe) => recipe.category == category).toList();
   }
 
   List<String> getAllCategories() {
-    final categories =
-        _recipes.map((recipe) => recipe.category).toSet().toList();
+    final categories = _recipes.map((recipe) => recipe.category).toSet().toList();
     categories.sort();
     return categories;
   }
 
-  // Search functionality
   List<Recipe> searchRecipes(String query) {
     if (query.isEmpty) return _recipes;
-
     final lowercaseQuery = query.toLowerCase();
     return _recipes.where((recipe) {
       return recipe.name.toLowerCase().contains(lowercaseQuery) ||
