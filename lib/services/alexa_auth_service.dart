@@ -1,19 +1,15 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../config/secrets.dart';
 
 class AlexaAuthService {
-  static const String _clientId = AlexaSecrets.clientId;
-  static const String _clientSecret = AlexaSecrets.clientSecret;
+  static const String _clientId = String.fromEnvironment('ALEXA_CLIENT_ID', defaultValue: '');
   
   // Official Amazon LWA redirect URI
-  static const String _redirectUri = AlexaSecrets.redirectUri;
+  static const String _redirectUri = 'https://pitangui.amazon.com/spa/skill/account-linking-status.html?vendorId=M3LR9C5NBR9T8A';
   
   // Alexa Skill ID
-  static const String _skillId = AlexaSecrets.skillId;
+  static const String _skillId = String.fromEnvironment('ALEXA_SKILL_ID', defaultValue: '');
   
   // Basic profile scope to verify connectivity
   static const String _fullScope = 'profile';
@@ -31,7 +27,7 @@ class AlexaAuthService {
       'https://www.amazon.com/ap/oa'
       '?client_id=$_clientId'
       '&scope=${Uri.encodeComponent(_fullScope)}'
-      '&response_type=code'
+      '&response_type=token' // Implicit Grant
       '&redirect_uri=${Uri.encodeComponent(_redirectUri)}'
     );
 
@@ -48,33 +44,20 @@ class AlexaAuthService {
     }
   }
 
-  // Handle the authorization code received from the redirect
-  Future<bool> handleAuthCode(String code) async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.amazon.com/auth/o2/token'),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: {
-          'grant_type': 'authorization_code',
-          'code': code,
-          'redirect_uri': _redirectUri,
-          'client_id': _clientId,
-          'client_secret': _clientSecret,
-        },
-      );
+  // Captures the token from the URL fragment (#access_token=...) if applicable
+  Future<bool> handleRedirect(Uri uri) async {
+    final fragment = uri.fragment;
+    if (fragment.isEmpty) return false;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _storage.write(key: 'alexa_access_token', value: data['access_token']);
+    final params = Uri.splitQueryString(fragment);
+    if (params.containsKey('access_token')) {
+      final token = params['access_token'];
+      if (token != null) {
+        await setToken(token);
         return true;
-      } else {
-        debugPrint('Token exchange failed: ${response.statusCode} - ${response.body}');
-        return false;
       }
-    } catch (e) {
-      debugPrint('Error exchanging code for token: $e');
-      return false;
     }
+    return false;
   }
 
   // Manual token entry for cases where automatic capture isn't possible

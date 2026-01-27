@@ -41,10 +41,9 @@ class ShoppingListProvider with ChangeNotifier {
     await _alexaService.authenticate();
   }
 
-  Future<bool> setAlexaAuthCode(String code) async {
-    final success = await _alexaAuth.handleAuthCode(code);
-    if (success) notifyListeners();
-    return success;
+  Future<void> setAlexaToken(String token) async {
+    await _alexaAuth.setToken(token);
+    notifyListeners();
   }
 
   Future<void> loadShoppingList() async {

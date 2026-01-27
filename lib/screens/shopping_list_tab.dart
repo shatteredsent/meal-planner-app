@@ -297,12 +297,12 @@ class _ShoppingListTabState extends State<ShoppingListTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Paste the authorization code from the Amazon account linking page:'),
+            const Text('Paste the access token from the Amazon account linking page:'),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               decoration: const InputDecoration(
-                labelText: 'Authorization Code',
+                labelText: 'Access Token',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -316,19 +316,10 @@ class _ShoppingListTabState extends State<ShoppingListTab> {
           ElevatedButton(
             onPressed: () async {
               if (controller.text.isNotEmpty) {
-                final success = await context.read<ShoppingListProvider>().setAlexaAuthCode(controller.text);
+                await context.read<ShoppingListProvider>().setAlexaToken(controller.text);
                 if (mounted) {
-                  if (success) {
-                    Navigator.pop(context);
-                    _showAlexaSyncDialog(); 
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('❌ Invalid code. Please try again.'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
+                  Navigator.pop(context);
+                  _showAlexaSyncDialog(); 
                 }
               }
             },
