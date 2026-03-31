@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linking to Family Meal Planner...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #F7F6F2;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #E4E2D9;
+      border-top-color: #1D9E75;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    p {
+      color: #888780;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>Linking your Alexa account...</p>
+  <script>
+    // Extract the auth code from the URL query params
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const error = params.get('error');
+
+    if (error) {
+      document.querySelector('p').textContent = 'Linking cancelled.';
+      setTimeout(() => {
+        window.location.href = 'familymealplanner://alexa-callback?error=' + error;
+      }, 500);
+    } else if (code) {
+      // Redirect back to the app with the auth code
+      window.location.href = 'familymealplanner://alexa-callback?code=' + code;
+    } else {
+      document.querySelector('p').textContent = 'Something went wrong. Please try again.';
+    }
+  </script>
+</body>
+</html>
