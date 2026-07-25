@@ -8,7 +8,7 @@ import {
   deleteDoc, doc, query, where, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Recipe, NewRecipe } from '../types/recipe';
+import { Recipe, NewRecipe, normalizeRecipe } from '../types/recipe';
 
 interface UseRecipesResult {
   recipes: Recipe[];
@@ -35,10 +35,11 @@ export function useRecipes(familyId: string): UseRecipesResult {
     const unsubscribe = onSnapshot(
       recipesQuery,
       (snapshot) => {
-        const loadedRecipes: Recipe[] = snapshot.docs.map((document) => ({
-          id: document.id,
-          ...(document.data() as Omit<Recipe, 'id'>),
-        }));
+        // normalizeRecipe absorbs the pre-redesign shape (string[] ingredients,
+        // no prepTime/servings/steps) so an unmigrated library still renders.
+        const loadedRecipes = snapshot.docs
+          .map((document) => normalizeRecipe(document.id, document.data()))
+          .sort((a, b) => a.name.localeCompare(b.name));
         setRecipes(loadedRecipes);
         setIsLoading(false);
       },

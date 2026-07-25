@@ -1,8 +1,9 @@
-// Renders a single recipe card in the recipe list.
-// Shows recipe name, ingredient count, and keto-friendly badge.
+// A recipe in the library list: name, subtitle, then slot / time / feeds meta.
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, Pressable, StyleSheet } from 'react-native';
 import { Recipe } from '../types/recipe';
+import { MEAL_TYPE_LABELS } from '../types/meal';
+import { color, type, GUTTER, RULE } from '../theme/tokens';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -10,76 +11,55 @@ interface RecipeCardProps {
 }
 
 export default function RecipeCard({ recipe, onPress }: RecipeCardProps) {
-  const ingredientLabel = recipe.ingredients.length === 1
-    ? '1 ingredient'
-    : `${recipe.ingredients.length} ingredients`;
+  const ingredientLabel =
+    recipe.ingredients.length === 1
+      ? '1 ingredient'
+      : `${recipe.ingredients.length} ingredients`;
+
+  const meta = [
+    MEAL_TYPE_LABELS[recipe.mealType],
+    recipe.prepTime,
+    `feeds ${recipe.servings}`,
+    ingredientLabel,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <TouchableOpacity
-      style={styles.card}
+    <Pressable
       onPress={() => onPress(recipe)}
-      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${recipe.name}, ${meta}`}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
-      <View style={styles.cardContent}>
-        <View style={styles.textGroup}>
-          <Text style={styles.recipeName}>{recipe.name}</Text>
-          <Text style={styles.ingredientCount}>{ingredientLabel}</Text>
-        </View>
-
-        {recipe.isKetoFriendly && (
-          <View style={styles.ketoBadge}>
-            <Text style={styles.ketoBadgeText}>Keto</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+      <Text style={type.mealNameSmall}>{recipe.name}</Text>
+      {!!recipe.subtitle && <Text style={styles.subtitle}>{recipe.subtitle}</Text>}
+      <Text style={styles.meta}>{meta}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 0.5,
-    borderColor: '#E4E2D9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    gap: 5,
+    paddingVertical: 16,
+    paddingHorizontal: GUTTER,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  cardPressed: {
+    backgroundColor: color.accent100,
   },
-  textGroup: {
-    flex: 1,
+  subtitle: {
+    ...type.secondarySmall,
+    lineHeight: 16,
   },
-  recipeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2A',
-    marginBottom: 4,
-  },
-  ingredientCount: {
-    fontSize: 13,
-    color: '#888780',
-  },
-  ketoBadge: {
-    backgroundColor: '#F0FAF5',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginLeft: 12,
-    borderWidth: 0.5,
-    borderColor: '#1D9E75',
-  },
-  ketoBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1D9E75',
+  meta: {
+    ...type.meta,
+    fontSize: 9.5,
+    letterSpacing: 0.95,
+    textTransform: 'uppercase',
+    color: color.accent700,
+    marginTop: 2,
   },
 });

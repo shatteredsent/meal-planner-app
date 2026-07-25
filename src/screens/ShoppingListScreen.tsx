@@ -1,84 +1,70 @@
-﻿// Shopping list screen — shows items grouped by grocery category.
-// Supports auto-generating from the meal plan and manual item addition.
-import React, { useState } from 'react';
+/**
+ * List tab — shop the plan.
+ *
+ * There is no "Generate" button by design: the list reconciles itself against the
+ * meal plan (see PlannerDataProvider), so what's on screen always matches what's
+ * planned. Items are grouped by aisle in the order you walk the store, with
+ * manually added things collected at the end.
+ */
+import React, { useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, SafeAreaView,
-  Alert, TextInput, KeyboardAvoidingView, Platform,
+  View, Text, ScrollView, StyleSheet, Alert,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
-import { useShoppingList } from '../hooks/useShoppingList';
-import { useMealPlan } from '../hooks/useMealPlan';
-import { useRecipes } from '../hooks/useRecipes';
-import { GROCERY_CATEGORIES } from '../types/shoppingItem';
-import ShoppingCategorySection from '../components/ShoppingCategorySection';
-import Header from '../components/Header';
+import { usePlannerData } from '../context/PlannerData';
+import {
+  GROCERY_CATEGORIES, MANUAL_GROUP_LABEL, ShoppingItem,
+} from '../types/shoppingItem';
+import StatBar from '../components/shopping/StatBar';
+import AisleGroup from '../components/shopping/AisleGroup';
+import AddItemRow from '../components/shopping/AddItemRow';
 import ShoppingListSkeleton from '../components/ShoppingListSkeleton';
-import EmptyState from '../components/EmptyState';
-import SendToAlexaModal from '../components/SendToAlexaModal';
-import { Ionicons } from '@expo/vector-icons';
+import ScreenHeader from '../components/ui/ScreenHeader';
+import { color, type, GUTTER, RULE } from '../theme/tokens';
+
+interface Group {
+  label: string;
+  items: ShoppingItem[];
+}
 
 export default function ShoppingListScreen() {
-  const { user } = useAuth();
-  const familyId = user?.uid ?? '';
+  const { plan, shopping } = usePlannerData();
+  const {
+    items, isLoading, hasError, addItem, toggleItem, togglePantry,
+  } = shopping;
 
-  const { items, isLoading, hasError, addItem, toggleItem, deleteItem,
-    clearCheckedItems, generateFromMealPlan } = useShoppingList(familyId);
-  const { meals } = useMealPlan(familyId);
-  const { recipes } = useRecipes(familyId);
+  const toBuy = items.filter((i) => !i.isChecked && !i.isPantry).length;
+  const inCart = items.filter((i) => i.isChecked).length;
+  const atHome = items.filter((i) => i.isPantry).length;
 
-  const [isAlexaModalVisible, setIsAlexaModalVisible] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const groups = useMemo<Group[]>(() => {
+    const byAisle = GROCERY_CATEGORIES.map((category) => ({
+      label: category,
+      items: items
+        .filter((item) => !item.isManual && item.category === category)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }));
 
-  const checkedCount = items.filter((i) => i.isChecked).length;
+    // Manual items ignore their aisle — the design collects them at the end
+    // under their own header, so what you typed stays where you can find it.
+    const manual = items
+      .filter((item) => item.isManual)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-  async function handleAddItem(): Promise<void> {
-    if (!newItemName.trim()) return;
+    return [...byAisle, { label: MANUAL_GROUP_LABEL, items: manual }].filter(
+      (group) => group.items.length > 0
+    );
+  }, [items]);
+
+  async function handleAddItem(name: string): Promise<void> {
     try {
-      await addItem(newItemName.trim());
-      setNewItemName('');
+      await addItem(name);
     } catch {
       Alert.alert('Error', 'Could not add the item. Please try again.');
     }
   }
 
-  async function handleGenerateFromMealPlan(): Promise<void> {
-    setIsGenerating(true);
-    try {
-      await generateFromMealPlan(meals, recipes);
-    } catch {
-      Alert.alert('Error', 'Could not generate the shopping list. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  async function handleClearChecked(): Promise<void> {
-    if (checkedCount === 0) return;
-    Alert.alert(
-      'Clear checked items',
-      `Remove ${checkedCount} checked item${checkedCount > 1 ? 's' : ''}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearCheckedItems();
-            } catch {
-              Alert.alert('Error', 'Could not clear items. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  }
-
-  if (isLoading) {
-    return <ShoppingListSkeleton />;
-  }
+  if (isLoading) return <ShoppingListSkeleton />;
 
   if (hasError) {
     return (
@@ -89,174 +75,73 @@ export default function ShoppingListScreen() {
     );
   }
 
+  const plannedMeals = plan.meals.length;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Header
-        title="Shopping List"
-        rightLabel={checkedCount > 0 ? `Clear ${checkedCount} checked` : undefined}
-        rightColor="#FF4444"
-        onRightPress={handleClearChecked}
+    <View style={styles.container}>
+      <ScreenHeader
+        kicker={`From ${plannedMeals} planned ${plannedMeals === 1 ? 'meal' : 'meals'}`}
+        meta={`${items.length} ${items.length === 1 ? 'line' : 'lines'}`}
+        title="Shopping list"
       />
-      {items.length > 0 && (
-        <TouchableOpacity
-          style={styles.alexaButton}
-          onPress={() => setIsAlexaModalVisible(true)}
-        >
-          <Ionicons name="send" size={14} color="#1D9E75" style={{ marginRight: 6 }} />
-          <Text style={styles.alexaButtonText}>Sync with Alexa</Text>
-        </TouchableOpacity>
-      )}
+
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Generate from meal plan button */}
-          <TouchableOpacity
-            style={styles.generateButton}
-            onPress={handleGenerateFromMealPlan}
-            disabled={isGenerating}
-          >
-            {isGenerating
-              ? <ActivityIndicator color="#1D9E75" size="small" />
-              : <Text style={styles.generateButtonText}>
-                  ✦ Generate from this week's meals
-                </Text>
-            }
-          </TouchableOpacity>
-
-          {/* Manual add input */}
-          <View style={styles.addRow}>
-            <TextInput
-              style={styles.addInput}
-              placeholder="Add an item manually..."
-              placeholderTextColor="#888780"
-              value={newItemName}
-              onChangeText={setNewItemName}
-              autoCapitalize="sentences"
-              returnKeyType="done"
-              onSubmitEditing={handleAddItem}
-            />
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddItem}
-            >
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <StatBar toBuy={toBuy} inCart={inCart} atHome={atHome} />
 
           {items.length === 0 && (
-            <EmptyState
-              icon="cart-outline"
-              title="Your list is empty"
-              subtitle="Tap 'Generate' to build your list from this week's meals, or add items manually."
-            />
+            <View style={styles.emptyState}>
+              <Text style={type.body}>
+                Your list fills itself in as you plan meals. Head to Plan and pick a
+                dinner to start.
+              </Text>
+            </View>
           )}
 
-          {GROCERY_CATEGORIES.map((category) => (
-            <ShoppingCategorySection
-              key={category}
-              category={category}
-              items={items.filter((item) => item.category === category)}
-              onToggle={toggleItem}
-              onDelete={deleteItem}
+          {groups.map((group) => (
+            <AisleGroup
+              key={group.label}
+              label={group.label}
+              items={group.items}
+              onToggleChecked={toggleItem}
+              onTogglePantry={togglePantry}
             />
           ))}
+
+          <AddItemRow onAdd={handleAddItem} />
         </ScrollView>
       </KeyboardAvoidingView>
-      <SendToAlexaModal 
-        isVisible={isAlexaModalVisible}
-        items={items}
-        onClose={() => setIsAlexaModalVisible(false)}
-      />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F6F2',
+    backgroundColor: color.bg,
   },
   flex: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  generateButton: {
-    backgroundColor: '#F0FAF5',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 0.5,
-    borderColor: '#1D9E75',
-  },
-  generateButtonText: {
-    fontSize: 14,
-    color: '#1D9E75',
-    fontWeight: '600',
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 8,
-  },
-  addInput: {
-    flex: 1,
-    borderWidth: 0.5,
-    borderColor: '#B4B2A9',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 15,
-    color: '#2C2C2A',
-    backgroundColor: '#fff',
-  },
-  addButton: {
-    backgroundColor: '#1D9E75',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
+  emptyState: {
+    paddingVertical: 28,
+    paddingHorizontal: GUTTER,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
   centeredState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F7F6F2',
+    padding: GUTTER,
+    backgroundColor: color.bg,
   },
   errorText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C2C2A',
+    ...type.mealNameSmall,
     marginBottom: 4,
   },
-  errorSubText: {
-    fontSize: 14,
-    color: '#888780',
-  },
-  alexaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F0FAF5',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#E4E2D9',
-    paddingVertical: 10,
-  },
-  alexaButtonText: {
-    fontSize: 14,
-    color: '#1D9E75',
-    fontWeight: '600',
-  },
+  errorSubText: type.secondary,
 });

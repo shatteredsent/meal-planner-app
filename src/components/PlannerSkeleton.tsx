@@ -1,69 +1,79 @@
-// Skeleton screen for the Planner tab while meal plan data loads.
+// Skeleton for the Plan and Week tabs while the meal plan loads.
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import SkeletonBlock from './SkeletonBlock';
+import { color, GUTTER, HEADER_TOP, RULE, HAIRLINE } from '../theme/tokens';
 
-function DayCardSkeleton() {
+function SlotSkeleton() {
   return (
-    <View style={styles.card}>
-      <SkeletonBlock width={80} height={18} borderRadius={6} style={styles.dayLabel} />
-      <View style={styles.divider} />
-      <View style={styles.slotRow}>
-        <SkeletonBlock width={50} height={14} borderRadius={4} />
-        <SkeletonBlock width="75%" height={36} borderRadius={8} />
-      </View>
-      <View style={styles.slotRow}>
-        <SkeletonBlock width={50} height={14} borderRadius={4} />
-        <SkeletonBlock width="75%" height={36} borderRadius={8} />
-      </View>
+    <View style={styles.slot}>
+      <SkeletonBlock width={70} height={10} />
+      <SkeletonBlock width="70%" height={20} />
+      <SkeletonBlock width="45%" height={12} />
     </View>
   );
 }
 
 export default function PlannerSkeleton() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {[1, 2, 3, 4].map((i) => (
-          <DayCardSkeleton key={i} />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <SkeletonBlock width={140} height={10} />
+        <SkeletonBlock width="55%" height={30} style={styles.headerTitle} />
+      </View>
+
+      <View style={styles.strip}>
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+          <View key={i} style={[styles.stripCell, i < 6 && styles.stripCellDivider]}>
+            <SkeletonBlock width={20} height={9} />
+            <SkeletonBlock width={16} height={15} />
+          </View>
         ))}
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      {[0, 1, 2].map((i) => (
+        <SlotSkeleton key={i} />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F6F2',
+    backgroundColor: color.bg,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+  header: {
+    paddingTop: HEADER_TOP,
+    paddingHorizontal: GUTTER,
+    paddingBottom: 14,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.5,
-    borderColor: '#E4E2D9',
+  headerTitle: {
+    marginTop: 10,
   },
-  dayLabel: {
-    marginBottom: 10,
-  },
-  divider: {
-    height: 0.5,
-    backgroundColor: '#E4E2D9',
-    marginBottom: 12,
-  },
-  slotRow: {
+  strip: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
+  },
+  stripCell: {
+    flex: 1,
+    gap: 6,
+    paddingVertical: 12,
+    paddingLeft: 8,
+  },
+  stripCellDivider: {
+    borderRightWidth: HAIRLINE,
+    borderRightColor: color.neutral300,
+  },
+  slot: {
+    gap: 12,
+    paddingTop: 16,
+    paddingBottom: 18,
+    paddingHorizontal: GUTTER,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
 });

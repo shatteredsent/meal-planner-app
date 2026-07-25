@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from './src/config/firebase';
 import AppNavigator  from './src/navigation/AppNavigator';
 import LoginScreen   from './src/screens/LoginScreen';
+import { useAppFonts } from './src/theme/useAppFonts';
+import { color } from './src/theme/tokens';
 
 // ─── Auth states ───────────────────────────────────────────────
 // 'loading'  — Firebase is still restoring the session from storage.
@@ -14,7 +18,8 @@ type AuthState = 'loading' | 'authed' | 'unauthed';
 
 export default function App() {
   const [authState, setAuthState] = useState<AuthState>('loading');
-  const [user, setUser]           = useState<User | null>(null);
+  const [, setUser]              = useState<User | null>(null);
+  const fontsReady               = useAppFonts();
 
   useEffect(() => {
     // onAuthStateChanged fires immediately with the cached session
@@ -28,24 +33,27 @@ export default function App() {
   }, []);
 
   // ── Loading splash ─────────────────────────────────────────────
-  // Shown for ~300ms while Firebase checks AsyncStorage for a
-  // cached token. Without this, users see a flash of LoginScreen
-  // even when they're already signed in.
-  if (authState === 'loading') {
+  // Covers both the ~300ms Firebase takes to check storage for a cached
+  // token and the Archivo load. Without it users see a flash of
+  // LoginScreen when already signed in, and a flash of the fallback font.
+  if (authState === 'loading' || !fontsReady) {
     return (
-      <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#1D9E75" />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.splash}>
+          <StatusBar style="dark" />
+          <ActivityIndicator size="large" color={color.accent} />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
-  // ── Auth gate ──────────────────────────────────────────────────
-  if (authState === 'unauthed') {
-    return <LoginScreen />;
-  }
-
-  // ── Authenticated: show the app ────────────────────────────────
-  return <AppNavigator />;
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      {/* ── Auth gate ── */}
+      {authState === 'unauthed' ? <LoginScreen /> : <AppNavigator />}
+    </SafeAreaProvider>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -53,6 +61,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: color.bg,
   },
 });

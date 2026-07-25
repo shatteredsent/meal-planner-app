@@ -1,84 +1,107 @@
-// Skeleton screen for the Shopping List tab while data loads.
+// Skeleton for the List tab while the shopping list loads.
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import SkeletonBlock from './SkeletonBlock';
+import { color, GUTTER, HEADER_TOP, RULE, HAIRLINE, ROW_PAD_Y } from '../theme/tokens';
 
-function CategorySkeleton() {
+function AisleSkeleton() {
   return (
-    <View style={styles.section}>
-      <SkeletonBlock width={100} height={12} borderRadius={4} style={styles.categoryLabel} />
-      <View style={styles.card}>
-        {[1, 2, 3].map((i) => (
-          <View key={i}>
-            <View style={styles.itemRow}>
-              <SkeletonBlock width={22} height={22} borderRadius={6} />
-              <SkeletonBlock width="70%" height={14} borderRadius={4} style={styles.itemName} />
-            </View>
-            {i < 3 && <View style={styles.divider} />}
-          </View>
-        ))}
+    <View style={styles.group}>
+      <View style={styles.groupHeader}>
+        <SkeletonBlock width={80} height={10} />
       </View>
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={styles.row}>
+          <View style={styles.checkbox} />
+          <View style={styles.rowBody}>
+            <SkeletonBlock width="65%" height={13} />
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
 
 export default function ShoppingListSkeleton() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <SkeletonBlock height={44} borderRadius={10} style={styles.generateButton} />
-        <SkeletonBlock height={44} borderRadius={10} style={styles.addRow} />
-        {[1, 2, 3].map((i) => (
-          <CategorySkeleton key={i} />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <SkeletonBlock width={130} height={10} />
+        <SkeletonBlock width="60%" height={30} style={styles.headerTitle} />
+      </View>
+
+      <View style={styles.statBar}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={[styles.statCell, i < 2 && styles.statCellDivider]}>
+            <SkeletonBlock width={44} height={9} />
+            <SkeletonBlock width={26} height={22} />
+          </View>
         ))}
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      {[0, 1, 2].map((i) => (
+        <AisleSkeleton key={i} />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F6F2',
+    backgroundColor: color.bg,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+  header: {
+    paddingTop: HEADER_TOP,
+    paddingHorizontal: GUTTER,
+    paddingBottom: 14,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
-  generateButton: {
-    marginBottom: 12,
+  headerTitle: {
+    marginTop: 10,
   },
-  addRow: {
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 16,
-  },
-  categoryLabel: {
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    borderWidth: 0.5,
-    borderColor: '#E4E2D9',
-  },
-  itemRow: {
+  statBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
-  itemName: {
+  statCell: {
     flex: 1,
+    gap: 6,
+    paddingVertical: 14,
+    paddingHorizontal: GUTTER,
   },
-  divider: {
-    height: 0.5,
-    backgroundColor: '#E4E2D9',
+  statCellDivider: {
+    borderRightWidth: RULE,
+    borderRightColor: color.text,
+  },
+  group: {
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
+  },
+  groupHeader: {
+    paddingVertical: 11,
+    paddingHorizontal: GUTTER,
+    backgroundColor: color.neutral200,
+    borderTopWidth: RULE,
+    borderBottomWidth: RULE,
+    borderColor: color.text,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderBottomWidth: HAIRLINE,
+    borderBottomColor: color.neutral300,
+  },
+  checkbox: {
+    width: 44,
+    borderRightWidth: HAIRLINE,
+    borderRightColor: color.neutral300,
+  },
+  rowBody: {
+    flex: 1,
+    paddingVertical: ROW_PAD_Y,
+    paddingHorizontal: GUTTER,
   },
 });

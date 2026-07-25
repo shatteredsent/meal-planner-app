@@ -1,64 +1,54 @@
-// Skeleton screen for the Recipes tab while recipe data loads.
+// Skeleton for the recipe library while recipes load.
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import SkeletonBlock from './SkeletonBlock';
+import { color, GUTTER, HEADER_TOP, RULE } from '../theme/tokens';
 
-function RecipeCardSkeleton() {
+function RecipeSkeleton() {
   return (
     <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <View style={styles.textGroup}>
-          <SkeletonBlock width="60%" height={16} borderRadius={6} style={styles.name} />
-          <SkeletonBlock width="30%" height={12} borderRadius={4} />
-        </View>
-        <SkeletonBlock width={44} height={24} borderRadius={6} />
-      </View>
+      <SkeletonBlock width="60%" height={17} />
+      <SkeletonBlock width="85%" height={12} />
+      <SkeletonBlock width="40%" height={10} />
     </View>
   );
 }
 
 export default function RecipesSkeleton() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <RecipeCardSkeleton key={i} />
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <SkeletonBlock width={90} height={10} />
+        <SkeletonBlock width="65%" height={30} style={styles.headerTitle} />
+      </View>
+
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <RecipeSkeleton key={i} />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F6F2',
+    backgroundColor: color.bg,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+  header: {
+    paddingTop: HEADER_TOP,
+    paddingHorizontal: GUTTER,
+    paddingBottom: 14,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
+  },
+  headerTitle: {
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 0.5,
-    borderColor: '#E4E2D9',
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  textGroup: {
-    flex: 1,
-    marginRight: 12,
-  },
-  name: {
-    marginBottom: 8,
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: GUTTER,
+    borderBottomWidth: RULE,
+    borderBottomColor: color.text,
   },
 });
