@@ -122,15 +122,21 @@ deliberately not migrated — they are week-scoped and rebuild themselves. The
 script is idempotent and leaves the old documents in place; delete them from the
 Firebase console once you're happy, then delete the script.
 
+### Retired along the way
+
+- The `joinFamily` Cloud Function, and the `invites` collection it served.
+  Replaced by the family code plus a rule in `firestore.rules`.
+- The Alexa skill. `alexaSkillHandler` and `exchangeAlexaToken` are deleted,
+  `alexaUserIdMap` is emptied, and the Amazon OAuth credentials it kept on the
+  family document are gone. Its client half had already been removed by the
+  redesign commit `c63db28`; the whole thing is recoverable from `4fb8bde` if it
+  is ever wanted back, though it would need porting to
+  `families/{code}/weeks/{weekId}`.
+
 ### Still outstanding
 
-- `joinFamily` is still deployed and now unreachable:
-  `firebase functions:delete joinFamily --region us-central1`
-- `alexaSkillHandler` and `exchangeAlexaToken` are still deployed. They read and
-  write the old top-level `shoppingItems` collection, which the app no longer
-  uses, so the Alexa skill now reads stale data. Its client-side half
-  (`SendToAlexaModal`, `useAlexaLink`) was removed by the redesign commit
-  `c63db28`; the source is recoverable from `4fb8bde` if it's worth porting to
-  `families/{code}/weeks/{weekId}`.
 - 39 recipes belonging to `test@yourdomain.com` were not migrated — that account
   has no family document. They are seed data from the old `seed-recipes.js`.
+- The old `families` / `recipes` / `mealPlans` / `invites` documents are still
+  in Firestore, unreachable from the client. Delete them from the console once
+  you are happy with the new app.
