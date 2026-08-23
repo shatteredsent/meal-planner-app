@@ -1,24 +1,28 @@
 /**
- * useRecipes — loads and manages recipes for the current family.
- * Subscribes to Firestore in real time so all family members see new recipes instantly.
+ * The family's recipe library — a subcollection, so it needs no familyId field
+ * and no `where` clause.
  */
-import { useState, useEffect } from 'react';
-import {
-  collection, onSnapshot, addDoc,
-  deleteDoc, doc, query, where, serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { Recipe, NewRecipe, normalizeRecipe } from '../types/recipe';
 
-interface UseRecipesResult {
+import { useEffect, useState } from 'react';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+} from 'firebase/firestore';
+import { db } from '../firebase';
+import type { NewRecipe, Recipe } from '../types';
+
+export interface RecipesApi {
   recipes: Recipe[];
   isLoading: boolean;
   hasError: boolean;
-  addRecipe: (newRecipe: NewRecipe) => Promise<void>;
-  deleteRecipe: (recipeId: string) => Promise<void>;
+  addRecipe: (recipe: NewRecipe) => Promise<void>;
+  deleteRecipe: (id: string) => Promise<void>;
 }
 
-export function useRecipes(familyId: string): UseRecipesResult {
+export function useRecipes(familyId: string): RecipesApi {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -26,21 +30,17 @@ export function useRecipes(familyId: string): UseRecipesResult {
   useEffect(() => {
     if (!familyId) return;
 
-    // Real-time listener scoped to this family's recipes
-    const recipesQuery = query(
-      collection(db, 'recipes'),
-      where('familyId', '==', familyId)
-    );
+    setIsLoading(true);
+    const ref = collection(db, 'families', familyId, 'recipes');
 
-    const unsubscribe = onSnapshot(
-      recipesQuery,
-      (snapshot) => {
-        // normalizeRecipe absorbs the pre-redesign shape (string[] ingredients,
-        // no prepTime/servings/steps) so an unmigrated library still renders.
-        const loadedRecipes = snapshot.docs
-          .map((document) => normalizeRecipe(document.id, document.data()))
-          .sort((a, b) => a.name.localeCompare(b.name));
-        setRecipes(loadedRecipes);
+    return onSnapshot(
+      ref,
+      (snap) => {
+        setRecipes(
+          snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as Recipe)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
         setIsLoading(false);
       },
       () => {
@@ -48,20 +48,17 @@ export function useRecipes(familyId: string): UseRecipesResult {
         setIsLoading(false);
       }
     );
-
-    return () => unsubscribe();
   }, [familyId]);
 
-  async function addRecipe(newRecipe: NewRecipe): Promise<void> {
-    await addDoc(collection(db, 'recipes'), {
-      ...newRecipe,
-      createdAt: serverTimestamp(),
-    });
-  }
-
-  async function deleteRecipe(recipeId: string): Promise<void> {
-    await deleteDoc(doc(db, 'recipes', recipeId));
-  }
-
-  return { recipes, isLoading, hasError, addRecipe, deleteRecipe };
+  return {
+    recipes,
+    isLoading,
+    hasError,
+    addRecipe: async (recipe) => {
+      await addDoc(collection(db, 'families', familyId, 'recipes'), recipe);
+    },
+    deleteRecipe: async (id) => {
+      await deleteDoc(doc(db, 'families', familyId, 'recipes', id));
+    },
+  };
 }

@@ -1,45 +1,21 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # dependencies
 node_modules/
 
-# Expo
-.expo/
+# build output
 dist/
-web-build/
-expo-env.d.ts
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
+# firebase admin credentials — private keys, never commit
+*-service-account.json
+service-account*.json
 
 # local env files
 .env*.local
 
-# typescript
+# editors / os
+.DS_Store
 *.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-
-# Firebase admin credentials — private keys, never commit
-*-service-account.json
-service-account*.json
