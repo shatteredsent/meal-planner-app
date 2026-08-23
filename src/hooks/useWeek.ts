@@ -19,9 +19,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { EMPTY_WEEK, slotKey } from '../types';
-import type { Category, Meal, MealType, Week } from '../types';
+import type { Extra, Meal, MealType, Week } from '../types';
 import { getWeekId } from '../lib/week';
-import { categorize } from '../lib/categorize';
 import { manualKey, staleKeys } from '../lib/shoppingList';
 
 export interface WeekApi {
@@ -39,8 +38,15 @@ export interface WeekApi {
 
   toggleChecked: (key: string, isChecked: boolean) => Promise<void>;
   togglePantry: (key: string, isPantry: boolean) => Promise<void>;
-  addExtra: (name: string) => Promise<void>;
+  /** Adds a hand-typed item. Build it with makeExtra. */
+  addExtra: (extra: Extra) => Promise<void>;
   removeExtra: (name: string) => Promise<void>;
+}
+
+/** Every extra whose name matches, compared the way the list keys them. */
+function sameName(extras: Extra[], name: string): Extra[] {
+  const target = name.toLowerCase().trim();
+  return extras.filter((e) => e.name.toLowerCase().trim() === target);
 }
 
 export function useWeek(familyId: string): WeekApi {
@@ -148,22 +154,30 @@ export function useWeek(familyId: string): WeekApi {
     togglePantry: (key, isPantry) =>
       merge({ pantry: isPantry ? arrayRemove(key) : arrayUnion(key) }),
 
-    addExtra: async (rawName) => {
-      const name = rawName.trim();
+    addExtra: async (extra) => {
+      const name = extra.name.trim();
       if (!name) return;
-      if (week.extras.some((e) => e.name.toLowerCase() === name.toLowerCase())) return;
 
-      await merge({
-        extras: arrayUnion({ name, category: categorize(name) as Category }),
-      });
+      // One row per name. Adding the same thing again replaces it, so a second
+      // go with a quantity corrects the first rather than duplicating it.
+      // `arrayUnion` is used for the add so two people adding different things
+      // at once don't overwrite each other.
+      const clashes = sameName(week.extras, name);
+      if (clashes.length > 0) {
+        await merge({ extras: arrayRemove(...clashes) });
+      }
+
+      await merge({ extras: arrayUnion({ ...extra, name }) });
     },
 
     removeExtra: async (name) => {
-      const extra = week.extras.find((e) => e.name === name);
-      if (!extra) return;
+      // Every entry with this name, not just the first: two people adding the
+      // same thing at once leaves two, and the list shows them as one row.
+      const matches = sameName(week.extras, name);
+      if (matches.length === 0) return;
 
       await merge({
-        extras: arrayRemove(extra),
+        extras: arrayRemove(...matches),
         // Don't leave the removed line's state behind to be inherited by a
         // future item of the same name.
         checked: arrayRemove(manualKey(name)),

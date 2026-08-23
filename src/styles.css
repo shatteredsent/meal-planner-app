@@ -370,16 +370,65 @@ ul {
 
 .pantry-btn.is-on { background: var(--text); border-color: var(--text); color: var(--bg); }
 
-.add-row {
+/* ─── Adding your own items ───────────────────────────────────────
+   The block at the top takes anything; the + on an aisle header drops
+   an item straight into that aisle. */
+
+.add-block {
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px var(--gutter) 18px;
+  background: var(--accent-100);
   border-bottom: var(--rule) solid var(--text);
 }
 
-.add-row .input { border: 0; border-right: var(--hairline) solid var(--n300); }
+.add-fields {
+  display: grid;
+  /* Name takes the room; quantity needs only a few characters. */
+  grid-template-columns: 1fr 88px;
+  gap: 10px;
+}
 
-.add-row button {
-  flex: 0 0 auto;
-  padding: 0 16px;
+.add-qty { text-align: center; }
+
+/* Group header can carry a control alongside its count. */
+.group-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.group-add {
+  width: 26px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: var(--hairline) solid var(--n500);
+  background: var(--bg);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--n700);
+  padding: 0;
+}
+
+.group-add:active { background: var(--accent-200); }
+.group-add.is-on { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+.aisle-add {
+  display: grid;
+  grid-template-columns: 1fr 72px auto;
+  gap: 8px;
+  padding: 10px var(--gutter);
+  background: var(--accent-100);
+  border-bottom: var(--hairline) solid var(--n300);
+}
+
+.aisle-add .input { padding: 9px 10px; }
+
+.aisle-add-go {
+  padding: 0 14px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -387,6 +436,8 @@ ul {
   background: var(--text);
   color: var(--bg);
 }
+
+.aisle-add-go:disabled { opacity: 0.4; cursor: default; }
 
 /* ─── Recipe rows ─────────────────────────────────────────────────*/
 

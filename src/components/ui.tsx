@@ -61,13 +61,28 @@ interface GroupHeadProps {
   meta?: string;
   /** Closes the section above with a 2px rule. */
   ruleAbove?: boolean;
+  /** A control that belongs to this group — the shopping list's add-to-aisle +. */
+  action?: { label: string; title: string; isOn?: boolean; onClick: () => void };
 }
 
-export function GroupHead({ label, meta, ruleAbove = false }: GroupHeadProps) {
+export function GroupHead({ label, meta, ruleAbove = false, action }: GroupHeadProps) {
   return (
     <div className={ruleAbove ? 'group-head rule-above' : 'group-head'}>
       <span className="t-label">{label}</span>
-      {meta && <span className="t-meta">{meta}</span>}
+      <span className="group-head-right">
+        {meta && <span className="t-meta">{meta}</span>}
+        {action && (
+          <button
+            className={action.isOn ? 'group-add is-on' : 'group-add'}
+            onClick={action.onClick}
+            title={action.title}
+            aria-label={action.title}
+            aria-expanded={action.isOn ?? false}
+          >
+            {action.label}
+          </button>
+        )}
+      </span>
     </div>
   );
 }

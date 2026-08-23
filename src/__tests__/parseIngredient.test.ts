@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseIngredient, parseIngredientLines } from '../lib/parseIngredient';
+import { parseIngredient, parseIngredientLines, parseQuantity } from '../lib/parseIngredient';
 
 describe('parseIngredient', () => {
   it('reads a whole amount and a unit', () => {
@@ -69,5 +69,31 @@ describe('parseIngredientLines', () => {
   it('is empty for empty input', () => {
     expect(parseIngredientLines('')).toEqual([]);
     expect(parseIngredientLines('\n \n')).toEqual([]);
+  });
+});
+
+describe('parseQuantity', () => {
+  it('reads a bare number', () => {
+    expect(parseQuantity('2')).toEqual({ amount: 2, unit: '' });
+  });
+
+  it('reads a number and a unit', () => {
+    expect(parseQuantity('1 lb')).toEqual({ amount: 1, unit: 'lb' });
+    expect(parseQuantity('2 cups')).toEqual({ amount: 2, unit: 'cup' });
+  });
+
+  it('reads fractions', () => {
+    expect(parseQuantity('½ cup')).toEqual({ amount: 0.5, unit: 'cup' });
+    expect(parseQuantity('1½ lb')).toEqual({ amount: 1.5, unit: 'lb' });
+  });
+
+  it('is no quantity at all when blank or unreadable', () => {
+    expect(parseQuantity('')).toEqual({ amount: 0, unit: '' });
+    expect(parseQuantity('   ')).toEqual({ amount: 0, unit: '' });
+    expect(parseQuantity('a few')).toEqual({ amount: 0, unit: '' });
+  });
+
+  it('drops a trailing word that is not a unit', () => {
+    expect(parseQuantity('3 bananas')).toEqual({ amount: 3, unit: '' });
   });
 });

@@ -12,6 +12,7 @@
 
 import { CATEGORIES, dayOfSlot, DAYS } from '../types';
 import type { Category, Extra, Meal, Week } from '../types';
+import { parseIngredient, parseQuantity } from './parseIngredient';
 
 export interface Line {
   /** Stable identity across renders — this is what `checked`/`pantry` store. */
@@ -23,6 +24,8 @@ export interface Line {
   /** Days that contributed, in week order. Empty for manual lines. */
   days: string[];
   isManual: boolean;
+  /** Manual lines only: shown in their aisle rather than under "Added by you". */
+  inAisle: boolean;
 }
 
 /**
@@ -63,6 +66,7 @@ export function buildList(meals: Record<string, Meal>, extras: Extra[]): Line[] 
           category: ingredient.category,
           days: day ? [day] : [],
           isManual: false,
+          inAisle: true,
         });
       }
     }
@@ -79,11 +83,14 @@ export function buildList(meals: Record<string, Meal>, extras: Extra[]): Line[] 
     byKey.set(manualKey(extra.name), {
       key: manualKey(extra.name),
       name: extra.name,
-      amount: 0,
-      unit: '',
+      // Defaulted rather than assumed: extras written before quantities existed
+      // have neither field.
+      amount: extra.amount ?? 0,
+      unit: extra.unit ?? '',
       category: extra.category,
       days: [],
       isManual: true,
+      inAisle: extra.inAisle === true,
     });
   }
 
@@ -110,12 +117,16 @@ export const MANUAL_LABEL = 'Added by you';
 export function groupByAisle(lines: Line[]): Group[] {
   const byName = (a: Line, b: Line) => a.name.localeCompare(b.name);
 
+  // A manual line placed from an aisle's + belongs in that aisle, next to the
+  // planned items you'll pick up at the same time.
   const aisles: Group[] = CATEGORIES.map((category) => ({
     label: category,
-    lines: lines.filter((l) => !l.isManual && l.category === category).sort(byName),
+    lines: lines
+      .filter((l) => l.category === category && (!l.isManual || l.inAisle))
+      .sort(byName),
   }));
 
-  const manual = lines.filter((l) => l.isManual).sort(byName);
+  const manual = lines.filter((l) => l.isManual && !l.inAisle).sort(byName);
 
   return [...aisles, { label: MANUAL_LABEL, lines: manual }].filter(
     (group) => group.lines.length > 0
@@ -137,6 +148,37 @@ export function staleKeys(
 ): string[] {
   const live = new Set(buildList(nextMeals, extras).map((line) => line.key));
   return [...new Set(held)].filter((key) => !live.has(key));
+}
+
+/**
+ * Builds an extra from what was typed.
+ *
+ * The name field accepts a quantity of its own ('2 lb ground beef'), because
+ * that is how people type; an explicit quantity field wins over one embedded in
+ * the name. Returns null when there is no name to add.
+ */
+export function makeExtra(
+  rawName: string,
+  quantityText = '',
+  category?: Category
+): Extra | null {
+  if (!rawName.trim()) return null;
+
+  const parsed = parseIngredient(rawName);
+  if (!parsed.name.trim()) return null;
+
+  const explicit = parseQuantity(quantityText);
+  const hasExplicit = explicit.amount > 0 || explicit.unit !== '';
+
+  return {
+    name: parsed.name,
+    amount: hasExplicit ? explicit.amount : parsed.amount,
+    unit: hasExplicit ? explicit.unit : parsed.unit,
+    // An aisle's + says where it goes; the general add block guesses, and
+    // collects it under "Added by you" either way.
+    category: category ?? parsed.category,
+    inAisle: category !== undefined,
+  };
 }
 
 export interface Counts {

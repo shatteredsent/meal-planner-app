@@ -108,10 +108,21 @@ export type NewRecipe = Omit<Recipe, 'id'>;
 
 // ─── The week ───────────────────────────────────────────────────────
 
-/** Something typed onto the list by hand rather than derived from the plan. */
+/**
+ * Something typed onto the list by hand rather than derived from the plan.
+ *
+ * `inAisle` records where you chose to put it: added from an aisle's + button it
+ * sits in that aisle alongside the planned items, and added from the list's own
+ * add block it collects under "Added by you" at the end. Where it lands is your
+ * choice, not a guess.
+ */
 export interface Extra {
   name: string;
   category: Category;
+  /** 0 when you didn't give one — the row then shows just the name. */
+  amount: number;
+  unit: string;
+  inAisle: boolean;
 }
 
 /**

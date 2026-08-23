@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildList, countLines, groupByAisle, lineKey, manualKey, staleKeys,
+  buildList, countLines, groupByAisle, lineKey, makeExtra, manualKey, staleKeys,
 } from '../lib/shoppingList';
 import { slotKey } from '../types';
-import type { Ingredient, Meal, Week } from '../types';
+import type { Category, Extra, Ingredient, Meal, Week } from '../types';
+
+/** An extra as the UI would build it. */
+const extra = (name: string, qty = '', category?: Category): Extra =>
+  makeExtra(name, qty, category)!;
 
 function meal(name: string, ingredients: Ingredient[]): Meal {
   return { name, subtitle: '', prepTime: '', ingredients };
@@ -110,7 +114,7 @@ describe('buildList', () => {
   });
 
   it('adds manual extras under their own namespaced key', () => {
-    const lines = buildList({}, [{ name: 'Dish soap', category: 'Other' }]);
+    const lines = buildList({}, [extra('Dish soap')]);
 
     expect(lines).toHaveLength(1);
     expect(lines[0].isManual).toBe(true);
@@ -121,7 +125,7 @@ describe('buildList', () => {
   it('never lets a manual item collide with a planned one of the same name', () => {
     const lines = buildList(
       { [slotKey('Monday', 'dinner')]: meal('A', [oil]) },
-      [{ name: 'Olive oil', category: 'Pantry' }]
+      [extra('Olive oil')]
     );
 
     expect(lines).toHaveLength(2);
@@ -139,7 +143,7 @@ describe('groupByAisle', () => {
           { name: 'Kale', amount: 1, unit: 'bunch', category: 'Produce' },
         ]),
       },
-      [{ name: 'Batteries', category: 'Other' }]
+      [extra('Batteries')]
     );
 
     expect(groupByAisle(lines).map((g) => g.label)).toEqual([
@@ -227,7 +231,7 @@ describe('staleKeys', () => {
 
   it('keeps a manual line ticked when the plan changes around it', () => {
     const held = [manualKey('Dish soap')];
-    const extras: Week['extras'] = [{ name: 'Dish soap', category: 'Other' }];
+    const extras: Week['extras'] = [extra('Dish soap')];
 
     expect(staleKeys({}, extras, held)).toEqual([]);
   });
@@ -237,5 +241,100 @@ describe('staleKeys', () => {
     const next = { [slotKey('Monday', 'dinner')]: meal('Salad', [oil]) };
 
     expect(staleKeys(next, [], before)).toEqual([lineKey('Chicken thighs', 'lb')]);
+  });
+});
+
+
+describe('makeExtra', () => {
+  it('returns null when there is nothing to add', () => {
+    expect(makeExtra('')).toBeNull();
+    expect(makeExtra('   ')).toBeNull();
+  });
+
+  it('takes a bare name with no quantity', () => {
+    expect(makeExtra('Paper towels')).toEqual({
+      name: 'Paper towels', amount: 0, unit: '', category: 'Other', inAisle: false,
+    });
+  });
+
+  it('reads a quantity from its own field', () => {
+    expect(makeExtra('Paper towels', '2')).toMatchObject({ amount: 2, unit: '' });
+    expect(makeExtra('Milk', '1 qt')).toMatchObject({ amount: 1, unit: 'qt' });
+  });
+
+  it('reads a quantity embedded in the name, because that is how people type', () => {
+    expect(makeExtra('2 lb ground beef')).toMatchObject({
+      name: 'ground beef', amount: 2, unit: 'lb', category: 'Meat & Seafood',
+    });
+  });
+
+  it('lets the quantity field win over one embedded in the name', () => {
+    expect(makeExtra('2 lb ground beef', '3 lb')).toMatchObject({ amount: 3, unit: 'lb' });
+  });
+
+  it('guesses the aisle but does not place the item in it', () => {
+    const e = makeExtra('Bananas')!;
+    expect(e.category).toBe('Produce');
+    expect(e.inAisle).toBe(false);
+  });
+
+  it('places the item when an aisle is named, overriding the guess', () => {
+    const e = makeExtra('Bananas', '', 'Frozen')!;
+    expect(e.category).toBe('Frozen');
+    expect(e.inAisle).toBe(true);
+  });
+
+  it('understands hand-written units like pack and box', () => {
+    expect(makeExtra('Tissues', '2 packs')).toMatchObject({ amount: 2, unit: 'pack' });
+    expect(makeExtra('Cereal', '1 box')).toMatchObject({ amount: 1, unit: 'box' });
+  });
+
+  it('ignores an unreadable quantity rather than failing', () => {
+    expect(makeExtra('Paper towels', 'a few')).toMatchObject({ amount: 0, unit: '' });
+  });
+});
+
+describe('placing extras in aisles', () => {
+  it('shows an aisle-placed extra inside that aisle', () => {
+    const groups = groupByAisle(buildList({}, [extra('Bell pepper', '2', 'Produce')]));
+
+    expect(groups.map((g) => g.label)).toEqual(['Produce']);
+    expect(groups[0].lines[0].name).toBe('Bell pepper');
+  });
+
+  it('keeps an unplaced extra under its own header', () => {
+    const groups = groupByAisle(buildList({}, [extra('Bananas')]));
+
+    expect(groups.map((g) => g.label)).toEqual(['Added by you']);
+  });
+
+  it('sorts an aisle-placed extra alongside the planned items', () => {
+    const lines = buildList(
+      {
+        [slotKey('Monday', 'dinner')]: meal('A', [
+          { name: 'Zucchini', amount: 1, unit: '', category: 'Produce' },
+        ]),
+      },
+      [extra('Apples', '3', 'Produce')]
+    );
+    const produce = groupByAisle(lines).find((g) => g.label === 'Produce')!;
+
+    expect(produce.lines.map((l) => l.name)).toEqual(['Apples', 'Zucchini']);
+  });
+
+  it('shows a quantity on an aisle-placed extra', () => {
+    const line = buildList({}, [extra('Bell pepper', '2', 'Produce')])[0];
+
+    expect(line.amount).toBe(2);
+    expect(line.isManual).toBe(true);
+  });
+
+  it('defaults an extra saved before quantities existed', () => {
+    const legacy = { name: 'Dish soap', category: 'Other' } as Extra;
+    const line = buildList({}, [legacy])[0];
+
+    expect(line.amount).toBe(0);
+    expect(line.unit).toBe('');
+    expect(line.inAisle).toBe(false);
   });
 });
