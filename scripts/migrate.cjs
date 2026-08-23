@@ -25,7 +25,11 @@
  */
 
 const path = require('path');
-const admin = require('firebase-admin');
+// firebase-admin v13 exposes only the modular API — there is no `admin.credential`
+// namespace and no `admin.firestore()`.
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
 const keyPath = process.argv[2];
 const commit = process.argv.includes('--commit');
@@ -35,10 +39,8 @@ if (!keyPath) {
   process.exit(1);
 }
 
-admin.initializeApp({
-  credential: admin.credential.cert(require(path.resolve(keyPath))),
-});
-const db = admin.firestore();
+initializeApp({ credential: cert(require(path.resolve(keyPath))) });
+const db = getFirestore();
 
 // ─── Ingredient parsing (copy of src/lib/parseIngredient.ts) ─────────
 
@@ -157,11 +159,27 @@ async function freshCode() {
 
 // ─── Migrate ─────────────────────────────────────────────────────────
 
+/** Every uid that can still sign in. Deleted accounts are not worth migrating. */
+async function liveUids() {
+  const uids = new Set();
+  let pageToken;
+
+  do {
+    const page = await getAuth().listUsers(1000, pageToken);
+    page.users.forEach((user) => uids.add(user.uid));
+    pageToken = page.pageToken;
+  } while (pageToken);
+
+  return uids;
+}
+
 async function main() {
   console.log(commit ? 'MIGRATING\n' : 'DRY RUN — nothing will be written\n');
 
+  const live = await liveUids();
   const oldFamilies = await db.collection('families').get();
   const seenUsers = new Map();
+  const migratedFamilyIds = new Set();
 
   for (const familyDoc of oldFamilies.docs) {
     const data = familyDoc.data();
@@ -173,7 +191,24 @@ async function main() {
       continue;
     }
 
-    const members = Array.isArray(data.adminUids) ? data.adminUids : [];
+    const claimed = Array.isArray(data.adminUids) ? data.adminUids : [];
+    const members = claimed.filter((uid) => live.has(uid));
+    const dropped = claimed.filter((uid) => !live.has(uid));
+
+    // A family nobody can sign in to is dead weight — migrating it would
+    // create a junk family and a user document for a deleted account.
+    if (members.length === 0) {
+      console.log(
+        `- ${data.name ?? '(unnamed)'}: skipped, no member still has an account ` +
+          `(${claimed.length} deleted)`
+      );
+      continue;
+    }
+
+    if (dropped.length > 0) {
+      console.log(`  (dropping ${dropped.length} deleted member(s) from ${data.name})`);
+    }
+
     const recipes = await db
       .collection('recipes')
       .where('familyId', '==', familyDoc.id)
@@ -194,6 +229,7 @@ async function main() {
       seenUsers.set(uid, code);
     }
 
+    migratedFamilyIds.add(familyDoc.id);
     if (!commit) continue;
 
     const batch = db.batch();
@@ -215,6 +251,25 @@ async function main() {
 
     await batch.commit();
     console.log(`    written. Share this code to join: ${code}`);
+  }
+
+  // Anything left behind gets named. A recipe whose familyId matches no family
+  // document has no family to migrate it into — usually seed or test data.
+  const allRecipes = await db.collection('recipes').get();
+  const stranded = new Map();
+  for (const recipeDoc of allRecipes.docs) {
+    const familyId = recipeDoc.data().familyId;
+    if (!migratedFamilyIds.has(familyId)) {
+      stranded.set(familyId, (stranded.get(familyId) ?? 0) + 1);
+    }
+  }
+
+  if (stranded.size > 0) {
+    console.log('\nNOT migrated — no matching family document:');
+    for (const [familyId, count] of stranded) {
+      console.log(`  ${count} recipe(s) under familyId ${familyId}`);
+    }
+    console.log('  (re-point their familyId and re-run if any of these matter)');
   }
 
   console.log(

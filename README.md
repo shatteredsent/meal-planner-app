@@ -38,6 +38,19 @@ npm test           # vitest
 The tests cover the parts where being wrong is expensive and invisible: summing
 a week into a shopping list, week arithmetic, and ingredient parsing.
 
+`firestore.rules` is hand-written and is the only thing protecting the data, so
+it has its own end-to-end test against the *deployed* rules — real ID tokens over
+the Firestore REST API, including every way the join clause could be abused:
+
+```bash
+npm i --no-save firebase-admin
+node scripts/rules-test.cjs
+```
+
+It creates a throwaway family and throwaway accounts, asserts 23 allow/deny
+outcomes, and deletes everything it made. It never touches real data. Run it
+after any change to `firestore.rules`.
+
 ## How it fits together
 
 ```
@@ -90,6 +103,9 @@ itself across a year boundary.
 
 ## Migrating from the old app
 
+**This has already been run** — Jake's Family is `JPNPCQ` with 40 recipes, and
+both members' `users/{uid}` documents point at it. What follows is for reference.
+
 The previous version stored flat `recipes` / `mealPlans` / `shoppingItems`
 collections scoped by a `familyId` field. To carry recipes across:
 
@@ -99,7 +115,22 @@ node scripts/migrate.cjs path/to/service-account.json           # dry run
 node scripts/migrate.cjs path/to/service-account.json --commit
 ```
 
-It prints the new family code for each family it moves. Meal plans and shopping
-lists are deliberately not migrated — they are week-scoped and rebuild
-themselves. The script is idempotent and leaves the old documents in place;
-delete them from the Firebase console once you're happy, then delete the script.
+It prints the new family code for each family it moves, skips families whose
+members no longer have auth accounts, and reports any recipes it had to leave
+behind rather than dropping them silently. Meal plans and shopping lists are
+deliberately not migrated — they are week-scoped and rebuild themselves. The
+script is idempotent and leaves the old documents in place; delete them from the
+Firebase console once you're happy, then delete the script.
+
+### Still outstanding
+
+- `joinFamily` is still deployed and now unreachable:
+  `firebase functions:delete joinFamily --region us-central1`
+- `alexaSkillHandler` and `exchangeAlexaToken` are still deployed. They read and
+  write the old top-level `shoppingItems` collection, which the app no longer
+  uses, so the Alexa skill now reads stale data. Its client-side half
+  (`SendToAlexaModal`, `useAlexaLink`) was removed by the redesign commit
+  `c63db28`; the source is recoverable from `4fb8bde` if it's worth porting to
+  `families/{code}/weeks/{weekId}`.
+- 39 recipes belonging to `test@yourdomain.com` were not migrated — that account
+  has no family document. They are seed data from the old `seed-recipes.js`.
