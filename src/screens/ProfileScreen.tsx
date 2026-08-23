@@ -6,7 +6,7 @@
  */
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert,
+  View, Text, StyleSheet, ScrollView, Pressable,
   ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -15,10 +15,12 @@ import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useFamily } from '../hooks/useFamily';
+import { usePlannerData } from '../context/PlannerData';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import GroupHeader from '../components/ui/GroupHeader';
 import FlatButton from '../components/ui/FlatButton';
 import { color, type, font, GUTTER, RULE, HAIRLINE } from '../theme/tokens';
+import { confirm, notify } from '../utils/dialog';
 
 const APP_VERSION = '1.0.0';
 
@@ -73,7 +75,9 @@ function Row({ label, value, onPress, isBusy, isLast }: RowProps) {
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-  const familyId = user?.uid ?? '';
+  // Shares the resolved family with the rest of the app, so an invited member
+  // sees and renames the family they actually belong to.
+  const { familyId } = usePlannerData();
   const { family, isLoading, updateFamilyName } = useFamily(familyId);
 
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -82,24 +86,23 @@ export default function ProfileScreen() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState('');
 
-  async function handleSignOut(): Promise<void> {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          setIsSigningOut(true);
-          try {
-            await signOut(auth);
-          } catch {
-            Alert.alert('Error', 'Could not sign out. Please try again.');
-          } finally {
-            setIsSigningOut(false);
-          }
-        },
+  function handleSignOut(): void {
+    confirm({
+      title: 'Sign out',
+      message: 'Are you sure you want to sign out?',
+      confirmLabel: 'Sign out',
+      destructive: true,
+      onConfirm: async () => {
+        setIsSigningOut(true);
+        try {
+          await signOut(auth);
+        } catch {
+          notify('Error', 'Could not sign out. Please try again.');
+        } finally {
+          setIsSigningOut(false);
+        }
       },
-    ]);
+    });
   }
 
   async function handleGenerateInvite(): Promise<void> {
@@ -118,7 +121,7 @@ export default function ProfileScreen() {
 
       setInviteCode(code);
     } catch {
-      Alert.alert('Error', 'Could not generate invite code. Please try again.');
+      notify('Error', 'Could not generate invite code. Please try again.');
     } finally {
       setIsGeneratingCode(false);
     }
@@ -126,7 +129,7 @@ export default function ProfileScreen() {
 
   async function handleUpdateFamilyName(): Promise<void> {
     if (!newFamilyName.trim()) {
-      Alert.alert('Missing name', 'Please enter a family name.');
+      notify('Missing name', 'Please enter a family name.');
       return;
     }
     try {
@@ -134,7 +137,7 @@ export default function ProfileScreen() {
       setIsEditingName(false);
       setNewFamilyName('');
     } catch {
-      Alert.alert('Error', 'Could not update family name. Please try again.');
+      notify('Error', 'Could not update family name. Please try again.');
     }
   }
 

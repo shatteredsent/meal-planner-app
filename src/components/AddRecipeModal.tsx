@@ -8,7 +8,7 @@
  */
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, Alert, ScrollView,
+  View, Text, TextInput, Pressable, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NewRecipe, parseIngredientText } from '../types/recipe';
@@ -19,6 +19,7 @@ import ScreenHeader from './ui/ScreenHeader';
 import GroupHeader from './ui/GroupHeader';
 import FlatButton from './ui/FlatButton';
 import { color, type, font, GUTTER, RULE, HAIRLINE } from '../theme/tokens';
+import { notify } from '../utils/dialog';
 
 type RecipeDraft = Omit<NewRecipe, 'familyId' | 'createdBy'>;
 
@@ -78,13 +79,13 @@ export default function AddRecipeModal({
 
   async function handleConfirm(): Promise<void> {
     if (!name.trim()) {
-      Alert.alert('Missing name', 'Please enter a recipe name.');
+      notify('Missing name', 'Please enter a recipe name.');
       return;
     }
 
     const filledIngredients = ingredients.filter((i) => i.trim() !== '');
     if (filledIngredients.length === 0) {
-      Alert.alert('Missing ingredients', 'Please add at least one ingredient.');
+      notify('Missing ingredients', 'Please add at least one ingredient.');
       return;
     }
 
@@ -108,7 +109,7 @@ export default function AddRecipeModal({
       });
       resetForm();
     } catch {
-      Alert.alert('Error', 'Could not save the recipe. Please try again.');
+      notify('Error', 'Could not save the recipe. Please try again.');
     } finally {
       setIsSaving(false);
     }

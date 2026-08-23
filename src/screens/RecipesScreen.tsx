@@ -6,7 +6,7 @@
  * same whether it's opened from here or from the picker.
  */
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usePlannerData } from '../context/PlannerData';
 import { useAuth } from '../hooks/useAuth';
@@ -20,6 +20,7 @@ import ScreenHeader from '../components/ui/ScreenHeader';
 import GroupHeader from '../components/ui/GroupHeader';
 import FlatButton from '../components/ui/FlatButton';
 import { color, type, GUTTER, RULE } from '../theme/tokens';
+import { confirm, notify } from '../utils/dialog';
 
 export default function RecipesScreen() {
   const navigation = useNavigation<any>();
@@ -52,25 +53,21 @@ export default function RecipesScreen() {
     const recipe = selectedRecipe;
     if (!recipe) return;
 
-    Alert.alert(
-      'Delete recipe',
-      'Are you sure? This cannot be undone. Meals already planned from it stay planned.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteRecipe(recipe.id);
-              setSelectedRecipe(null);
-            } catch {
-              Alert.alert('Error', 'Could not delete the recipe. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+    confirm({
+      title: 'Delete recipe',
+      message:
+        'Are you sure? This cannot be undone. Meals already planned from it stay planned.',
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await deleteRecipe(recipe.id);
+          setSelectedRecipe(null);
+        } catch {
+          notify('Error', 'Could not delete the recipe. Please try again.');
+        }
+      },
+    });
   }
 
   if (isLoading) return <RecipesSkeleton />;

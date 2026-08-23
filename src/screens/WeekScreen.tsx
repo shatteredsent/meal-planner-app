@@ -5,7 +5,7 @@
  * Plan tab, which selects that day and opens its picker.
  */
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { usePlannerData } from '../context/PlannerData';
 import { getWeekDates, weekdayIndex, formatWeekDayLabel } from '../utils/week';
@@ -15,6 +15,7 @@ import PlannerSkeleton from '../components/PlannerSkeleton';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import FlatButton from '../components/ui/FlatButton';
 import { color, type, font, GUTTER, RULE } from '../theme/tokens';
+import { confirm, notify } from '../utils/dialog';
 
 const TOTAL_SLOTS = 21;
 
@@ -40,30 +41,26 @@ export default function WeekScreen() {
 
   function handleClearWeek(): void {
     if (meals.length === 0) {
-      Alert.alert('Nothing to clear', 'This week has no meals planned yet.');
+      notify('Nothing to clear', 'This week has no meals planned yet.');
       return;
     }
 
-    Alert.alert(
-      'Start the week over',
-      'This removes every planned meal and the shopping list built from it. Manually added items stay.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start over',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Emptying the plan is enough: the reconciler drops every derived
-              // line on the next snapshot, and manual items are left alone.
-              await clearWeek();
-            } catch {
-              Alert.alert('Error', 'Could not clear the week. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+    confirm({
+      title: 'Start the week over',
+      message:
+        'This removes every planned meal and the shopping list built from it. Manually added items stay.',
+      confirmLabel: 'Start over',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          // Emptying the plan is enough: the reconciler drops every derived
+          // line on the next snapshot, and manual items are left alone.
+          await clearWeek();
+        } catch {
+          notify('Error', 'Could not clear the week. Please try again.');
+        }
+      },
+    });
   }
 
   if (isLoading) return <PlannerSkeleton />;

@@ -8,7 +8,7 @@
  */
 import React, { useMemo } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Alert,
+  View, Text, ScrollView, StyleSheet,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { usePlannerData } from '../context/PlannerData';
@@ -21,6 +21,7 @@ import AddItemRow from '../components/shopping/AddItemRow';
 import ShoppingListSkeleton from '../components/ShoppingListSkeleton';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import { color, type, GUTTER, RULE } from '../theme/tokens';
+import { notify } from '../utils/dialog';
 
 interface Group {
   label: string;
@@ -60,7 +61,7 @@ export default function ShoppingListScreen() {
     try {
       await addItem(name);
     } catch {
-      Alert.alert('Error', 'Could not add the item. Please try again.');
+      notify('Error', 'Could not add the item. Please try again.');
     }
   }
 

@@ -21,6 +21,12 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn() }),
 }));
 
+// ProfileScreen reads the resolved familyId from the provider rather than
+// assuming user.uid, so the shared family is what gets renamed.
+jest.mock('../context/PlannerData', () => ({
+  usePlannerData: () => ({ familyId: 'test-uid' }),
+}));
+
 jest.mock('../config/firebase', () => ({
   auth: {},
   db: {},

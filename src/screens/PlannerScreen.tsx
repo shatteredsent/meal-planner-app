@@ -6,7 +6,7 @@
  * need the currently targeted slot.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { usePlannerData } from '../context/PlannerData';
 import { getWeekDates, weekdayIndex, formatWeekRange } from '../utils/week';
 import { MealType, MEAL_TYPES, DAYS_OF_WEEK } from '../types/meal';
@@ -24,6 +24,7 @@ import PlannerSkeleton from '../components/PlannerSkeleton';
 import ScreenHeader from '../components/ui/ScreenHeader';
 import FlatButton from '../components/ui/FlatButton';
 import { color, type, GUTTER } from '../theme/tokens';
+import { confirm, notify } from '../utils/dialog';
 
 function nudgeFor(emptySlots: number): string {
   if (emptySlots === 0) {
@@ -100,7 +101,7 @@ export default function PlannerScreen() {
         prepTime: recipe.prepTime,
       });
     } catch {
-      Alert.alert('Error', 'Could not plan that meal. Please try again.');
+      notify('Error', 'Could not plan that meal. Please try again.');
     }
   }
 
@@ -120,7 +121,7 @@ export default function PlannerScreen() {
         prepTime: '30 min',
       });
     } catch {
-      Alert.alert('Error', 'Could not save that meal. Please try again.');
+      notify('Error', 'Could not save that meal. Please try again.');
     }
   }
 
@@ -138,7 +139,7 @@ export default function PlannerScreen() {
     if (!recipe) {
       // The recipe was deleted since it was planned. The meal itself still
       // stands — it carries its own name and ingredient snapshot.
-      Alert.alert(
+      notify(
         'Recipe unavailable',
         'This recipe is no longer in your library, but the meal is still planned.'
       );
@@ -166,7 +167,7 @@ export default function PlannerScreen() {
         prepTime: recipe.prepTime,
       });
     } catch {
-      Alert.alert('Error', 'Could not plan that meal. Please try again.');
+      notify('Error', 'Could not plan that meal. Please try again.');
     }
   }
 
@@ -187,34 +188,33 @@ export default function PlannerScreen() {
 
   // ── Destructive actions keep their confirms ─────────────────────
   function handleClearSlot(mealType: MealType): void {
-    Alert.alert('Remove meal', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await clearSlot(selectedDay, mealType);
-          } catch {
-            Alert.alert('Error', 'Could not remove the meal. Please try again.');
-          }
-        },
+    confirm({
+      title: 'Remove meal',
+      message: 'Are you sure?',
+      confirmLabel: 'Remove',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await clearSlot(selectedDay, mealType);
+        } catch {
+          notify('Error', 'Could not remove the meal. Please try again.');
+        }
       },
-    ]);
+    });
   }
 
   async function handleRepeatPreviousDay(): Promise<void> {
     const sourceDay = DAYS_OF_WEEK[selectedDayIndex === 0 ? 6 : selectedDayIndex - 1];
 
     if (!meals.some((m) => m.dayOfWeek === sourceDay)) {
-      Alert.alert('Nothing to copy', `${sourceDay} has no meals planned yet.`);
+      notify('Nothing to copy', `${sourceDay} has no meals planned yet.`);
       return;
     }
 
     try {
       await copyDay(sourceDay, selectedDay);
     } catch {
-      Alert.alert('Error', 'Could not copy that day. Please try again.');
+      notify('Error', 'Could not copy that day. Please try again.');
     }
   }
 

@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Pressable,
-  StyleSheet, Alert,
+  StyleSheet,
   KeyboardAvoidingView, ScrollView, Platform,
 } from 'react-native';
 import {
@@ -21,6 +21,7 @@ import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from '../config/firebase';
 import FlatButton from '../components/ui/FlatButton';
 import { color, type, font, GUTTER } from '../theme/tokens';
+import { notify } from '../utils/dialog';
 
 type SignUpMode = 'new'| 'join';
 
@@ -34,7 +35,7 @@ export default function LoginScreen() {
 
   async function handleSubmit(): Promise<void> {
     if (!email || !password) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      notify('Missing fields', 'Please enter your email and password.');
       return;
     }
 
@@ -50,7 +51,7 @@ export default function LoginScreen() {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      notify('Error', e.message);
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export default function LoginScreen() {
 
   async function handleJoinFamily(): Promise<void> {
     if (!inviteCode.trim()) {
-      Alert.alert('Missing code', 'Please enter your invite code.');
+      notify('Missing code', 'Please enter your invite code.');
       return;
     }
 

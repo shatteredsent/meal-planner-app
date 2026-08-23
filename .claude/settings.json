@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git ls-tree *)",
+      "Bash(git restore *)",
+      "Bash(git check-ignore *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('expo-dev-client:',p.dependencies['expo-dev-client']||'NOT installed'\\)\")",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "Bash(npx expo *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8081 --max-time 25)",
+      "Bash(curl -s http://localhost:8081 --max-time 15)",
+      "Bash(curl -s -o /dev/null -w \"bundle HTTP %{http_code}  %{size_download} bytes\\\\n\" \"http://localhost:8081/index.bundle?platform=web&dev=true\" --max-time 180)",
+      "PowerShell($procs = Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach \\($p in $procs\\) { try { $proc = Get-Process -Id $p -ErrorAction Stop; Write-Output \"PID $p = $\\($proc.ProcessName\\)\"; Stop-Process -Id $p -Force -Confirm:$false; Write-Output \"  stopped\" } catch { Write-Output \"  PID $p already gone\" } }; Start-Sleep -Seconds 2; $c = Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue; if \\($null -eq $c\\) { Write-Output \"8081 now free\" } else { Write-Output \"8081 STILL in use\" })",
+      "PowerShell(Write-Output \"=== Firewall profiles ===\"; Get-NetFirewallProfile | Select-Object Name, Enabled | Format-Table -AutoSize; Write-Output \"=== Existing inbound rules for node / 8081 ===\"; $r = Get-NetFirewallRule -Direction Inbound -Enabled True -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'node|expo|8081' } | Select-Object DisplayName, Action; if \\($r\\) { $r | Format-Table -AutoSize } else { Write-Output \"  none found\" }; Write-Output \"=== ngrok available for tunnel fallback? ===\"; if \\(Test-Path \"node_modules\\\\@expo\\\\ngrok\"\\) { Write-Output \"  installed\" } else { Write-Output \"  NOT installed \\(tunnel would prompt to install\\)\" })",
+      "Bash(REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.163 CI=1 npx expo start --port 8081)",
+      "PowerShell($procs = Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if \\($null -eq $procs\\) { Write-Output \"8081 already free\" } else { foreach \\($p in $procs\\) { try { Stop-Process -Id $p -Force -Confirm:$false; Write-Output \"stopped PID $p\" } catch { Write-Output \"PID $p gone\" } } }; Start-Sleep -Seconds 2; if \\($null -eq \\(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue\\)\\) { Write-Output \"8081 free\" } else { Write-Output \"8081 still busy\" })",
+      "Bash(REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.163 npx expo start --port 8081)",
+      "Bash(curl -s -o /dev/null -w \"Metro on 192.168.1.163:8081 -> HTTP %{http_code}\\\\n\" \"http://192.168.1.163:8081/status\" --max-time 10)",
+      "Bash(node -e \"console.log\\(require\\('firebase/package.json'\\).version\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(python -)",
+      "Bash(mkdir -p public)",
+      "Bash(rm -rf dist)"
+    ]
+  }
+}

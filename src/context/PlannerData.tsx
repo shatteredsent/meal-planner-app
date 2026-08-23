@@ -13,6 +13,7 @@ import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useFamilyId } from '../hooks/useFamilyId';
 import { useMealPlan } from '../hooks/useMealPlan';
 import { useShoppingList } from '../hooks/useShoppingList';
 import { useRecipes } from '../hooks/useRecipes';
@@ -51,7 +52,9 @@ const PlannerDataContext = createContext<PlannerDataValue | null>(null);
 
 export function PlannerDataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const familyId = user?.uid ?? '';
+  // Not user.uid: an invited member's data lives under the family that invited
+  // them. See useFamilyId.
+  const { familyId } = useFamilyId(user?.uid ?? '');
 
   const plan = useMealPlan(familyId);
   const shopping = useShoppingList(familyId);
