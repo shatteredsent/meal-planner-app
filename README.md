@@ -13,8 +13,12 @@ npm run dev        # http://localhost:5173
 ## Deploying
 
 ```bash
-npm run deploy     # typecheck, build, then push to Firebase Hosting
+npm run deploy          # check, build, then push site + rules
+npm run deploy:hosting  # site only
 ```
+
+Both build first, on purpose: running `firebase deploy` by hand ships whatever
+happens to be in `dist/`, which is how a stale bundle went out once.
 
 That runs `vite build` into `dist/` and `firebase deploy`, which publishes both
 the site and `firestore.rules`. The live URL is
@@ -33,6 +37,7 @@ Nothing here needs the Blaze plan — there are no Cloud Functions.
 
 ```bash
 npm test           # vitest
+npm run check      # typecheck + tests + colour contrast
 ```
 
 The tests cover the parts where being wrong is expensive and invisible: summing
@@ -51,6 +56,17 @@ It creates a throwaway family and throwaway accounts, asserts 23 allow/deny
 outcomes, and deletes everything it made. It never touches real data. Run it
 after any change to `firestore.rules`.
 
+The palette is soft by design, which makes it easy to drift into unreadable, so
+`scripts/contrast.mjs` checks every foreground/background pair against WCAG AA
+and exits non-zero on a regression:
+
+```bash
+npm run contrast
+```
+
+Four pairs failed when the pastel palette first went in — muted text on the page
+ground was 2.87:1 against a 4.5:1 target. Don't lighten the ink tokens by eye.
+
 ## How it fits together
 
 ```
@@ -58,7 +74,7 @@ index.html          PWA tags, Google Fonts, root div
 src/
   main.tsx          mounts App
   App.tsx           auth gate, three tabs, two pushed screens
-  styles.css        the entire design system
+  styles.css        the entire design system — palette, type, every component
   types.ts          every stored and rendered shape
   firebase.ts       app, auth, db
   hooks/
@@ -73,7 +89,34 @@ src/
     parseIngredient.ts  typed text -> quantified ingredient
   screens/          Plan, List, Week, Recipes, Settings, Login, FamilySetup
   components/       ui primitives, MealPicker, RecipeDetail, RecipeForm
+scripts/
+  contrast.mjs      WCAG check over the palette
+  rules-test.cjs    end-to-end security-rules test
+  migrate.cjs       one-time move off the old data model
 ```
+
+### Navigation
+
+Four tabs — Plan, List, Week, Recipes. Settings sits off the bar as a
+destination and returns with Back.
+
+There is no router library. Views push `history` entries themselves, and each
+sheet pushes its own, so the phone's Back gesture closes an open sheet first and
+then walks back through screens rather than dropping out of the app. Escape does
+the same on a keyboard.
+
+One trap worth knowing if you touch this: a sheet unmounts *after* the new screen
+is pushed when you switch tabs with it open, so its cleanup must only pop the
+entry it added while that entry is still current — otherwise it undoes the
+navigation you just asked for. See `useDismiss` in `components/ui.tsx`.
+
+### Colour
+
+Each grocery aisle owns a pastel, so the shopping list is navigable by colour as
+much as by reading it, and the three meal slots carry the same tints as pills.
+Adding an aisle means adding a `--<name>-bg` / `--<name>-ink` pair, a `tone-<name>`
+rule, an entry in `TONES` in `lib/shoppingList.ts`, and a row in
+`scripts/contrast.mjs`.
 
 ### Firestore layout
 
