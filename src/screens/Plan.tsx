@@ -38,6 +38,7 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
   const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
 
   const weekDates = useMemo(() => getWeekDates(new Date()), []);
+  const todayIndex = weekdayIndex(new Date());
 
   // A hand-off from the Week screen: select that day and open its picker, then
   // clear the request so it doesn't reopen on every later render.
@@ -117,7 +118,11 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
             return (
               <button
                 key={name}
-                className={index === dayIndex ? 'day-cell is-selected' : 'day-cell'}
+                className={[
+                  'day-cell',
+                  index === dayIndex ? 'is-selected' : '',
+                  index === todayIndex ? 'is-today' : '',
+                ].filter(Boolean).join(' ')}
                 onClick={() => setDayIndex(index)}
                 aria-pressed={index === dayIndex}
               >
@@ -133,9 +138,9 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
           const recipe = meal && recipeFor(meal);
 
           return (
-            <section className="slot" key={mealType}>
+            <section className={`slot meal-${mealType}`} key={mealType}>
               <div className="slot-head">
-                <span className="t-label">{MEAL_TYPE_LABELS[mealType]}</span>
+                <span className="slot-type">{MEAL_TYPE_LABELS[mealType]}</span>
                 {meal?.prepTime && <span className="t-meta">{meal.prepTime}</span>}
               </div>
 

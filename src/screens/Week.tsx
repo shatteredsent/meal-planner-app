@@ -15,7 +15,6 @@ import { Button, ErrorState, Header, Loading } from '../components/ui';
 interface Props {
   week: WeekApi;
   onOpenSlot: (day: string, mealType: MealType) => void;
-  onOpenRecipes: () => void;
   onOpenSettings: () => void;
   onOpenList: () => void;
 }
@@ -29,7 +28,6 @@ function nudgeFor(filled: number): string {
 export default function Week({
   week,
   onOpenSlot,
-  onOpenRecipes,
   onOpenSettings,
   onOpenList,
 }: Props) {
@@ -105,9 +103,10 @@ export default function Week({
           <Button label="Start the week over" variant="quiet" onClick={clearWeek} />
         </div>
 
+        {/* Recipes has its own tab now. Settings is a destination rather than
+            somewhere you live, so it stays here. */}
         <div className="pad stack rule-top">
           <span className="t-label">Elsewhere</span>
-          <Button label="Recipe library" onClick={onOpenRecipes} />
           <Button label="Family & settings" onClick={onOpenSettings} />
         </div>
       </div>

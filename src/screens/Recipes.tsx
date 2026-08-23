@@ -8,12 +8,7 @@ import { Button, ErrorState, GroupHead, Header, Loading } from '../components/ui
 import RecipeDetail from '../components/RecipeDetail';
 import RecipeForm from '../components/RecipeForm';
 
-interface Props {
-  recipes: RecipesApi;
-  onBack: () => void;
-}
-
-export default function Recipes({ recipes, onBack }: Props) {
+export default function Recipes({ recipes }: { recipes: RecipesApi }) {
   const [isAdding, setIsAdding] = useState(false);
   const [selected, setSelected] = useState<Recipe | null>(null);
 
@@ -49,7 +44,6 @@ export default function Recipes({ recipes, onBack }: Props) {
       <Header
         kicker={`${recipes.recipes.length} ${recipes.recipes.length === 1 ? 'recipe' : 'recipes'}`}
         title="Recipe library"
-        onBack={onBack}
       />
 
       <div className="scroll">

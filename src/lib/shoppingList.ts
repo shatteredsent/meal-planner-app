@@ -133,6 +133,22 @@ export function groupByAisle(lines: Line[]): Group[] {
   );
 }
 
+/** The pastel each group is drawn in — see the tone-* rules in styles.css. */
+const TONES: Record<string, string> = {
+  'Produce': 'produce',
+  'Meat & Seafood': 'meat',
+  'Dairy & Eggs': 'dairy',
+  'Pantry': 'pantry',
+  'Bakery': 'bakery',
+  'Frozen': 'frozen',
+  'Other': 'other',
+  [MANUAL_LABEL]: 'added',
+};
+
+export function toneFor(label: string): string {
+  return TONES[label] ?? 'other';
+}
+
 /**
  * Line state that a given plan no longer justifies keeping.
  *

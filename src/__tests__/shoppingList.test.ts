@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildList, countLines, groupByAisle, lineKey, makeExtra, manualKey, staleKeys,
+  buildList, countLines, groupByAisle, lineKey, makeExtra, manualKey,
+  MANUAL_LABEL, staleKeys, toneFor,
 } from '../lib/shoppingList';
-import { slotKey } from '../types';
+import { CATEGORIES, slotKey } from '../types';
 import type { Category, Extra, Ingredient, Meal, Week } from '../types';
 
 /** An extra as the UI would build it. */
@@ -336,5 +337,21 @@ describe('placing extras in aisles', () => {
     expect(line.amount).toBe(0);
     expect(line.unit).toBe('');
     expect(line.inAisle).toBe(false);
+  });
+});
+
+describe('toneFor', () => {
+  it('gives every aisle its own tone', () => {
+    const tones = CATEGORIES.map(toneFor);
+    expect(new Set(tones).size).toBe(CATEGORIES.length);
+  });
+
+  it('gives the manual group its own tone too', () => {
+    expect(toneFor(MANUAL_LABEL)).toBe('added');
+    expect(CATEGORIES.map(toneFor)).not.toContain('added');
+  });
+
+  it('falls back rather than returning nothing for an unknown label', () => {
+    expect(toneFor('Nonsense')).toBe('other');
   });
 });

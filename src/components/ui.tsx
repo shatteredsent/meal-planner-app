@@ -1,6 +1,6 @@
 /** The handful of shapes every screen is built from. */
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface HeaderProps {
   kicker: string;
@@ -59,15 +59,31 @@ export function Button({
 interface GroupHeadProps {
   label: string;
   meta?: string;
-  /** Closes the section above with a 2px rule. */
+  /** Closes the section above with a rule. */
   ruleAbove?: boolean;
-  /** A control that belongs to this group — the shopping list's add-to-aisle +. */
+  /** Pastel keyed to the group — see toneFor. */
+  tone?: string;
+  /** Dimmed slightly: the group has nothing in it yet. */
+  isVacant?: boolean;
+  /** A control belonging to this group — the shopping list's add-to-aisle +. */
   action?: { label: string; title: string; isOn?: boolean; onClick: () => void };
 }
 
-export function GroupHead({ label, meta, ruleAbove = false, action }: GroupHeadProps) {
+export function GroupHead({
+  label,
+  meta,
+  ruleAbove = false,
+  tone,
+  isVacant = false,
+  action,
+}: GroupHeadProps) {
+  const classes = ['group-head'];
+  if (ruleAbove) classes.push('rule-above');
+  if (tone) classes.push(`tone-${tone}`);
+  if (isVacant) classes.push('is-vacant');
+
   return (
-    <div className={ruleAbove ? 'group-head rule-above' : 'group-head'}>
+    <div className={classes.join(' ')}>
       <span className="t-label">{label}</span>
       <span className="group-head-right">
         {meta && <span className="t-meta">{meta}</span>}
@@ -87,6 +103,55 @@ export function GroupHead({ label, meta, ruleAbove = false, action }: GroupHeadP
   );
 }
 
+/**
+ * Closes an overlay on Escape and on the browser's Back gesture.
+ *
+ * Back is the natural way to dismiss a sheet on a phone, and without this it
+ * would leave the app entirely. One history entry is pushed while the sheet is
+ * open and popped again if it closes some other way, so the stack stays level.
+ *
+ * `onClose` is held in a ref rather than being an effect dependency: callers
+ * pass an inline arrow, and depending on it would push a fresh history entry on
+ * every render.
+ */
+function useDismiss(isOpen: boolean, onClose: () => void) {
+  const close = useRef(onClose);
+  close.current = onClose;
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let ourEntry = true;
+    window.history.pushState({ overlay: true }, '');
+
+    function onPop() {
+      ourEntry = false; // Back already consumed it.
+      close.current();
+    }
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') close.current();
+    }
+
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('keydown', onKey);
+
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('keydown', onKey);
+
+      // Closed by the button or the scrim: drop the entry we added, so Back
+      // doesn't have to be pressed twice to leave the screen.
+      //
+      // Only when our entry is still the current one. Switching tabs with a
+      // sheet open unmounts it *after* the new screen was pushed, and going
+      // back there would undo the navigation the user just asked for.
+      const onTop = (window.history.state as { overlay?: boolean } | null)?.overlay;
+      if (ourEntry && onTop) window.history.back();
+    };
+  }, [isOpen]);
+}
+
 interface SheetProps {
   isOpen: boolean;
   kicker: string;
@@ -95,13 +160,22 @@ interface SheetProps {
   children: ReactNode;
 }
 
-/** A bottom sheet. Tapping the scrim closes it; the panel itself doesn't. */
+/** A bottom sheet. Closes on the scrim, Escape, or Back — never on the panel. */
 export function Sheet({ isOpen, kicker, title, onClose, children }: SheetProps) {
+  useDismiss(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
-    <div className="sheet-scrim" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+    <div className="sheet-scrim" onClick={onClose} role="presentation">
+      <div
+        className="sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className="sheet-grip" />
         <div className="sheet-head">
           <div>
             <p className="t-label header-kicker">{kicker}</p>

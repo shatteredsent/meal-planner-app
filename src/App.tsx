@@ -1,13 +1,15 @@
 /**
- * The whole app: an auth gate, three tabs, and two screens reached from Week.
+ * The whole app: an auth gate, four tabs, and Settings reached from Week.
  *
  * The data hooks run here, once, and are passed down as props. There is no
- * context and no router — with five screens and one live document, neither pays
- * for itself.
+ * context and no router library — with six screens and one live document,
+ * neither pays for itself. Back is wired to the history stack by hand, which is
+ * a dozen lines and the difference between a web page and something that feels
+ * like an app on a phone.
  */
 
-import { useCallback, useMemo, useState } from 'react';
-import { MEAL_TYPES, TOTAL_SLOTS } from './types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { TOTAL_SLOTS } from './types';
 import type { MealType } from './types';
 import { useSession } from './hooks/useSession';
 import { useWeek } from './hooks/useWeek';
@@ -23,13 +25,20 @@ import Week from './screens/Week';
 import Recipes from './screens/Recipes';
 import Settings from './screens/Settings';
 
-type View = 'plan' | 'list' | 'week' | 'recipes' | 'settings';
+const VIEWS = ['plan', 'list', 'week', 'recipes', 'settings'] as const;
+type View = (typeof VIEWS)[number];
 
+/** Recipes earns a tab: it was three taps deep behind the Week screen. */
 const TABS: { view: View; label: string }[] = [
   { view: 'plan', label: 'Plan' },
   { view: 'list', label: 'List' },
   { view: 'week', label: 'Week' },
+  { view: 'recipes', label: 'Recipes' },
 ];
+
+function isView(value: unknown): value is View {
+  return typeof value === 'string' && (VIEWS as readonly string[]).includes(value);
+}
 
 export default function App() {
   const session = useSession();
@@ -50,7 +59,7 @@ export default function App() {
     );
   }
 
-  // Remounts on a family change, which resets every screen's local state along
+  // Remounts on a family change, resetting every screen's local state along
   // with the subscriptions.
   return <Signed key={session.familyId} familyId={session.familyId} session={session} />;
 }
@@ -70,6 +79,35 @@ function Signed({
 
   const clearFocus = useCallback(() => setFocus(null), []);
 
+  /**
+   * Navigation that the Back gesture understands.
+   *
+   * Each move pushes an entry, so Back returns to the previous screen instead of
+   * closing the app. Sheets push their own entry (see useDismiss in ui.tsx), so
+   * Back closes an open sheet first and only then changes screen.
+   */
+  const go = useCallback((next: View) => {
+    setView((current) => {
+      if (current !== next) window.history.pushState({ view: next }, '');
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    // Stamp the entry we start on, so returning to it restores the right screen.
+    window.history.replaceState({ view: 'plan' }, '');
+
+    function onPop(event: PopStateEvent) {
+      const next = (event.state as { view?: unknown } | null)?.view;
+      // Entries a sheet pushed carry no view. Landing on one means a sheet just
+      // closed, which is not a reason to change screen.
+      if (isView(next)) setView(next);
+    }
+
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   const lines = useMemo(
     () => buildList(week.week.meals, week.week.extras),
     [week.week.meals, week.week.extras]
@@ -78,54 +116,50 @@ function Signed({
   const filled = Object.keys(week.week.meals).length;
 
   const metas: Record<string, string> = {
-    plan: `${MEAL_TYPES.length} a day`,
+    plan: 'pick meals',
     list: `${counts.toBuy} to buy`,
     week: `${filled}/${TOTAL_SLOTS}`,
+    recipes: `${recipes.recipes.length}`,
   };
 
   /** From the Week screen: hand the slot to Plan and switch to it. */
   function openSlot(day: string, mealType: MealType) {
     setFocus({ day, mealType });
-    setView('plan');
+    go('plan');
   }
 
   return (
     <div className="app">
       {view === 'plan' && (
-        <Plan
-          week={week}
-          recipes={recipes}
-          focus={focus}
-          onFocusHandled={clearFocus}
-        />
+        <Plan week={week} recipes={recipes} focus={focus} onFocusHandled={clearFocus} />
       )}
       {view === 'list' && <List week={week} />}
       {view === 'week' && (
         <Week
           week={week}
           onOpenSlot={openSlot}
-          onOpenList={() => setView('list')}
-          onOpenRecipes={() => setView('recipes')}
-          onOpenSettings={() => setView('settings')}
+          onOpenList={() => go('list')}
+          onOpenSettings={() => go('settings')}
         />
       )}
-      {view === 'recipes' && <Recipes recipes={recipes} onBack={() => setView('week')} />}
+      {view === 'recipes' && <Recipes recipes={recipes} />}
       {view === 'settings' && (
         <Settings
           user={session.user}
           familyId={familyId}
-          onBack={() => setView('week')}
+          onBack={() => window.history.back()}
         />
       )}
 
-      {/* Recipes and Settings sit outside the three-cell bar, as in the design. */}
-      {view !== 'recipes' && view !== 'settings' && (
+      {/* Settings is a destination rather than a place you live, so it sits
+          outside the bar and comes back with Back. */}
+      {view !== 'settings' && (
         <nav className="tabs">
           {TABS.map((tab) => (
             <button
               key={tab.view}
               className={view === tab.view ? 'tab is-active' : 'tab'}
-              onClick={() => setView(tab.view)}
+              onClick={() => go(tab.view)}
               aria-current={view === tab.view ? 'page' : undefined}
             >
               <span className="tab-label">{tab.label}</span>
