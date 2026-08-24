@@ -7,9 +7,11 @@ interface HeaderProps {
   meta?: string;
   title: string;
   onBack?: () => void;
+  /** Data is still arriving. Shown instead of `meta`, never as a blocking state. */
+  syncing?: boolean;
 }
 
-export function Header({ kicker, meta, title, onBack }: HeaderProps) {
+export function Header({ kicker, meta, title, onBack, syncing = false }: HeaderProps) {
   return (
     <header className="header">
       <div className="header-top">
@@ -18,6 +20,8 @@ export function Header({ kicker, meta, title, onBack }: HeaderProps) {
           <button className="btn btn-inline btn-quiet" onClick={onBack}>
             Back
           </button>
+        ) : syncing ? (
+          <span className="t-meta syncing">Syncing…</span>
         ) : (
           meta && <span className="t-meta">{meta}</span>
         )}
@@ -122,10 +126,17 @@ function useDismiss(isOpen: boolean, onClose: () => void) {
     if (!isOpen) return;
 
     let ourEntry = true;
+    const openedAt = Date.now();
     window.history.pushState({ overlay: true }, '');
 
     function onPop() {
-      ourEntry = false; // Back already consumed it.
+      // A real Back gesture cannot arrive in the same breath as the tap that
+      // opened the sheet. Some WebViews echo a popstate straight after
+      // pushState, which would slam the sheet shut the instant it appeared —
+      // indistinguishable, to the person tapping, from nothing happening.
+      if (Date.now() - openedAt < 250) return;
+
+      ourEntry = false; // Back already consumed our entry.
       close.current();
     }
 

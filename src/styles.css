@@ -839,3 +839,6 @@ textarea.input { resize: vertical; font-family: var(--sans); line-height: 1.5; }
   text-decoration: underline;
   min-height: 44px;
 }
+
+/* Data still arriving. A quiet note in the header, never a blocking screen. */
+.syncing { color: var(--accent-deep); }

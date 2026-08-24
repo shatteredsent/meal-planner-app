@@ -88,10 +88,11 @@ const NL = String.fromCharCode(10);
     await page.getByRole('button', { name: /start the family/i }).click();
   }
 
+  const t0 = Date.now();
   await page.getByRole('button', { name: /choose breakfast/i })
-    .waitFor({ timeout: 20000 })
+    .waitFor({ timeout: 60000 })
     .catch(() => bail('Plan screen'));
-  console.log('reached Plan screen' + NL);
+  console.log('reached Plan screen after ' + (Date.now() - t0) + 'ms' + NL);
   const recipeCount = await page.evaluate(() => {
     const t = document.querySelector('.tab:nth-child(4) .tab-meta');
     return t ? t.textContent : '?';

@@ -10,7 +10,11 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyB8tWZrDuDkyJs-gxMSuoeLIcwKjpuCNe4',
@@ -23,4 +27,16 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+/**
+ * Firestore with an on-disk cache.
+ *
+ * Without it, every launch waits on the network before showing anything, and
+ * establishing the listen stream can take tens of seconds on a cold or flaky
+ * connection — which reads as an app that has hung. With it, a returning phone
+ * paints last week's plan from IndexedDB immediately and reconciles behind the
+ * scenes, and the list keeps working with no signal in the shop.
+ */
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});

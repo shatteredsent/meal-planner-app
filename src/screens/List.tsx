@@ -19,7 +19,7 @@ import {
 } from '../lib/shoppingList';
 import type { Group } from '../lib/shoppingList';
 import { formatDays, formatQuantity } from '../lib/quantity';
-import { Button, ErrorState, GroupHead, Header, Loading } from '../components/ui';
+import { Button, ErrorState, GroupHead, Header } from '../components/ui';
 
 export default function List({ week }: { week: WeekApi }) {
   const [name, setName] = useState('');
@@ -36,7 +36,10 @@ export default function List({ week }: { week: WeekApi }) {
     [week.week.meals, week.week.extras]
   );
 
-  if (week.isLoading) return <Loading />;
+  // Deliberately not blocked on isLoading. An empty week renders perfectly
+  // well, and waiting on the listen stream can take tens of seconds on a cold
+  // connection — which looks like an app that has died. The header says
+  // "Syncing…" until the first snapshot lands.
   if (week.hasError) return <ErrorState what="shopping list" />;
 
   const filled = groupByAisle(lines);
@@ -88,6 +91,7 @@ export default function List({ week }: { week: WeekApi }) {
         kicker={`From ${mealCount} planned ${mealCount === 1 ? 'meal' : 'meals'}`}
         meta={`${lines.length} ${lines.length === 1 ? 'line' : 'lines'}`}
         title="Shopping list"
+        syncing={week.isLoading}
       />
 
       <div className="scroll">

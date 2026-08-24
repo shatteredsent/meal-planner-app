@@ -10,7 +10,7 @@ import { DAYS, MEAL_TYPES, MEAL_TYPE_LABELS, TOTAL_SLOTS } from '../types';
 import type { MealType } from '../types';
 import type { WeekApi } from '../hooks/useWeek';
 import { formatWeekDayLabel, getWeekDates, weekdayIndex } from '../lib/week';
-import { Button, ErrorState, Header, Loading } from '../components/ui';
+import { Button, ErrorState, Header } from '../components/ui';
 
 interface Props {
   week: WeekApi;
@@ -34,7 +34,10 @@ export default function Week({
   const weekDates = useMemo(() => getWeekDates(new Date()), []);
   const todayIndex = weekdayIndex(new Date());
 
-  if (week.isLoading) return <Loading />;
+  // Deliberately not blocked on isLoading. An empty week renders perfectly
+  // well, and waiting on the listen stream can take tens of seconds on a cold
+  // connection — which looks like an app that has died. The header says
+  // "Syncing…" until the first snapshot lands.
   if (week.hasError) return <ErrorState what="meal plan" />;
 
   const filled = Object.keys(week.week.meals).length;
@@ -54,7 +57,12 @@ export default function Week({
 
   return (
     <>
-      <Header kicker="This week" meta={`${filled}/${TOTAL_SLOTS}`} title="The week" />
+      <Header
+        kicker="This week"
+        meta={`${filled}/${TOTAL_SLOTS}`}
+        title="The week"
+        syncing={week.isLoading}
+      />
 
       <div className="scroll">
         <div className="week-summary">

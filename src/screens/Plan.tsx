@@ -11,7 +11,7 @@ import type { Meal, MealType, Recipe } from '../types';
 import type { WeekApi } from '../hooks/useWeek';
 import type { RecipesApi } from '../hooks/useRecipes';
 import { formatWeekRange, getWeekDates, weekdayIndex } from '../lib/week';
-import { Button, ErrorState, Header, Loading } from '../components/ui';
+import { Button, ErrorState, Header } from '../components/ui';
 import MealPicker, { mealFromRecipe } from '../components/MealPicker';
 import type { SlotTarget } from '../components/MealPicker';
 import RecipeDetail from '../components/RecipeDetail';
@@ -51,7 +51,10 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
     onFocusHandled();
   }, [focus, onFocusHandled]);
 
-  if (week.isLoading) return <Loading />;
+  // Deliberately not blocked on isLoading. An empty week renders perfectly
+  // well, and waiting on the listen stream can take tens of seconds on a cold
+  // connection — which looks like an app that has died. The header says
+  // "Syncing…" until the first snapshot lands.
   if (week.hasError) return <ErrorState what="meal plan" />;
 
   const day = DAYS[dayIndex];
@@ -109,6 +112,7 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
         kicker={formatWeekRange(weekDates)}
         meta={`${3 - empty}/3 chosen`}
         title={day}
+        syncing={week.isLoading}
       />
 
       <div className="scroll">

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { MEAL_TYPES, MEAL_TYPE_LABELS } from '../types';
 import type { NewRecipe, Recipe } from '../types';
 import type { RecipesApi } from '../hooks/useRecipes';
-import { Button, ErrorState, GroupHead, Header, Loading } from '../components/ui';
+import { Button, ErrorState, GroupHead, Header } from '../components/ui';
 import RecipeDetail from '../components/RecipeDetail';
 import RecipeForm from '../components/RecipeForm';
 
@@ -12,7 +12,10 @@ export default function Recipes({ recipes }: { recipes: RecipesApi }) {
   const [isAdding, setIsAdding] = useState(false);
   const [selected, setSelected] = useState<Recipe | null>(null);
 
-  if (recipes.isLoading) return <Loading />;
+  // Deliberately not blocked on isLoading. An empty week renders perfectly
+  // well, and waiting on the listen stream can take tens of seconds on a cold
+  // connection — which looks like an app that has died. The header says
+  // "Syncing…" until the first snapshot lands.
   if (recipes.hasError) return <ErrorState what="recipes" />;
 
   const groups = MEAL_TYPES.map((mealType) => ({
@@ -44,6 +47,7 @@ export default function Recipes({ recipes }: { recipes: RecipesApi }) {
       <Header
         kicker={`${recipes.recipes.length} ${recipes.recipes.length === 1 ? 'recipe' : 'recipes'}`}
         title="Recipe library"
+        syncing={recipes.isLoading}
       />
 
       <div className="scroll">
