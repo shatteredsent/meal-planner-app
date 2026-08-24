@@ -67,6 +67,25 @@ npm run contrast
 Four pairs failed when the pastel palette first went in — muted text on the page
 ground was 2.87:1 against a 4.5:1 target. Don't lighten the ink tokens by eye.
 
+`scripts/e2e.cjs` drives the deployed app in a real browser, because jsdom will
+happily tell you a screen works when it doesn't:
+
+```bash
+npm i --no-save firebase-admin && npx playwright install chromium webkit
+node scripts/e2e.cjs                          # fresh throwaway account
+ENGINE=webkit node scripts/e2e.cjs            # iOS's engine
+FAMILY=JPNPCQ node scripts/e2e.cjs            # against real data, read-only
+URL=http://localhost:5173 node scripts/e2e.cjs
+```
+
+It creates a throwaway account, signs in through the UI, opens each meal
+picker, screenshots what it finds, and removes the account afterwards.
+
+One trap it exists to catch: in a DOM test, `element.click()` dispatches the
+event but does not flush React's state update inside `act`, so a working screen
+looks broken. Use `fireEvent`. `src/__tests__/Plan.dom.test.tsx` says so at the
+top for the same reason.
+
 ## How it fits together
 
 ```
@@ -92,8 +111,17 @@ src/
 scripts/
   contrast.mjs      WCAG check over the palette
   rules-test.cjs    end-to-end security-rules test
+  e2e.cjs           drives the real app in a real browser
   migrate.cjs       one-time move off the old data model
 ```
+
+### Telling which build a device is running
+
+The Settings screen shows a `Build` stamp — deploy timestamp plus git SHA,
+injected by `vite.config.ts`. If a phone misbehaves, check that first: a stamp
+older than the last deploy means the browser is serving a cached bundle, and
+"Reload the app" on the same screen clears it. `index.html` is served
+`no-cache` so a reload is normally enough.
 
 ### Navigation
 

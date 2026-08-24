@@ -19,3 +19,6 @@ service-account*.json
 # editors / os
 .DS_Store
 *.tsbuildinfo
+
+# playwright artefacts from scripts/e2e.cjs
+e2e-*.png

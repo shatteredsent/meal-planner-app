@@ -90,6 +90,21 @@ export default function Settings({ user, familyId, onBack }: Props) {
           <span className="t-sec">{APP_VERSION}</span>
         </div>
 
+        {/* Which bundle this device is actually running. If it doesn't match
+            what was last deployed, the browser is serving a cached copy. */}
+        <div className="settings-row">
+          <span className="t-row">Build</span>
+          <span className="t-meta">{__BUILD__}</span>
+        </div>
+
+        <div className="pad stack">
+          <Button
+            label="Reload the app"
+            variant="quiet"
+            onClick={() => window.location.reload()}
+          />
+        </div>
+
         <div className="pad">
           <Button label="Sign out" variant="quiet" onClick={handleSignOut} />
         </div>
