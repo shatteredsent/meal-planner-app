@@ -72,7 +72,7 @@ function Signed({
   session: ReturnType<typeof useSession>;
 }) {
   const week = useWeek(familyId);
-  const recipes = useRecipes(familyId);
+  const recipes = useRecipes(session.cookbookId);
 
   const [view, setView] = useState<View>('plan');
   const [focus, setFocus] = useState<SlotTarget | null>(null);
@@ -147,6 +147,7 @@ function Signed({
         <Settings
           user={session.user}
           familyId={familyId}
+          cookbookId={session.cookbookId}
           onBack={() => window.history.back()}
         />
       )}

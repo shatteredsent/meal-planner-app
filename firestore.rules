@@ -1,13 +1,31 @@
 rules_version = '2';
 
-// Everything a family owns lives under its own document, so one membership
-// check covers the recipes and every week at once.
+// A family owns its week: the plan and the shopping list's state.
+// A cookbook owns recipes, and one or more families cook from it.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Which family a user belongs to. Yours and yours only.
+    //
+    // Note this document is written by the user themselves, so its familyId is
+    // a *claim*, never proof of membership. Anything that relies on it must
+    // check the family's own member list — see amMemberOf() below.
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    function familyMembers(familyId) {
+      return get(/databases/$(database)/documents/families/$(familyId)).data.members;
+    }
+
+    /** The family this caller says they are in. Unverified on its own. */
+    function claimedFamily() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId;
+    }
+
+    /** Proof: the family's own member list contains the caller. */
+    function amMemberOf(familyId) {
+      return request.auth != null && request.auth.uid in familyMembers(familyId);
     }
 
     match /families/{familyId} {
@@ -35,12 +53,59 @@ service cloud.firestore {
           && request.resource.data.members == resource.data.members.concat([request.auth.uid])
         );
 
-      // Recipes and weeks. `get()` reads the parent family rather than trusting
-      // a familyId field on the document itself.
+      // Weeks. Recipes used to live here too; they moved to cookbooks, and any
+      // left behind stay readable to the family that owns them.
       match /{document=**} {
-        allow read, write: if request.auth != null
-          && request.auth.uid in
-             get(/databases/$(database)/documents/families/$(familyId)).data.members;
+        allow read, write: if amMemberOf(familyId);
+      }
+    }
+
+    match /cookbooks/{cookbookId} {
+      function cookbookFamilies() {
+        return get(/databases/$(database)/documents/cookbooks/$(cookbookId)).data.families;
+      }
+
+      /**
+       * The caller is in a family this cookbook is shared with.
+       *
+       * Both halves are needed. The first says the family is on the cookbook;
+       * the second proves the caller is really in that family, since the
+       * claim itself comes from a document the caller writes.
+       */
+      function sharesCookbook() {
+        return request.auth != null
+          && amMemberOf(claimedFamily())
+          && cookbookFamilies().hasAny([claimedFamily()]);
+      }
+
+      allow get: if request.auth != null
+        && amMemberOf(claimedFamily())
+        && resource.data.families.hasAny([claimedFamily()]);
+      // The cookbook id is its join code, so listing would hand them all out.
+      allow list: if false;
+      allow delete: if false;
+
+      // A new cookbook starts shared with exactly the creator's own family.
+      allow create: if request.auth != null
+        && amMemberOf(claimedFamily())
+        && request.resource.data.families == [claimedFamily()];
+
+      // A family already on the cookbook can rename it. A family that isn't
+      // can do exactly one thing: append itself. That is redeeming a cookbook
+      // code — the same shape as joining a family.
+      allow update: if (
+          request.auth != null
+          && amMemberOf(claimedFamily())
+          && resource.data.families.hasAny([claimedFamily()])
+        ) || (
+          request.auth != null
+          && amMemberOf(claimedFamily())
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['families'])
+          && request.resource.data.families == resource.data.families.concat([claimedFamily()])
+        );
+
+      match /recipes/{recipeId} {
+        allow read, write: if sharesCookbook();
       }
     }
   }

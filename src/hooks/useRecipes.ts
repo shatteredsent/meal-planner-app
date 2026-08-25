@@ -1,6 +1,9 @@
 /**
- * The family's recipe library — a subcollection, so it needs no familyId field
- * and no `where` clause.
+ * The shared recipe library — a subcollection of the cookbook, so it needs no
+ * owner field and no `where` clause.
+ *
+ * Keyed on cookbookId rather than familyId: several families can cook from one
+ * library while each keeps its own week and shopping list.
  */
 
 import { useEffect, useState } from 'react';
@@ -22,16 +25,16 @@ export interface RecipesApi {
   deleteRecipe: (id: string) => Promise<void>;
 }
 
-export function useRecipes(familyId: string): RecipesApi {
+export function useRecipes(cookbookId: string): RecipesApi {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!cookbookId) return;
 
     setIsLoading(true);
-    const ref = collection(db, 'families', familyId, 'recipes');
+    const ref = collection(db, 'cookbooks', cookbookId, 'recipes');
 
     return onSnapshot(
       ref,
@@ -48,17 +51,17 @@ export function useRecipes(familyId: string): RecipesApi {
         setIsLoading(false);
       }
     );
-  }, [familyId]);
+  }, [cookbookId]);
 
   return {
     recipes,
     isLoading,
     hasError,
     addRecipe: async (recipe) => {
-      await addDoc(collection(db, 'families', familyId, 'recipes'), recipe);
+      await addDoc(collection(db, 'cookbooks', cookbookId, 'recipes'), recipe);
     },
     deleteRecipe: async (id) => {
-      await deleteDoc(doc(db, 'families', familyId, 'recipes', id));
+      await deleteDoc(doc(db, 'cookbooks', cookbookId, 'recipes', id));
     },
   };
 }

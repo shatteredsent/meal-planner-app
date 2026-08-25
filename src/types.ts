@@ -3,12 +3,17 @@
  *
  * Firestore layout:
  *   users/{uid}                          -> { familyId }
- *   families/{familyId}                  -> { name, members: uid[] }
- *   families/{familyId}/recipes/{id}     -> Recipe
+ *   families/{familyId}                  -> { name, members: uid[], cookbookId }
  *   families/{familyId}/weeks/{weekId}   -> Week
+ *   cookbooks/{cookbookId}               -> { name, families: familyId[] }
+ *   cookbooks/{cookbookId}/recipes/{id}  -> Recipe
  *
- * The family document id *is* the join code, so sharing a family needs no
- * invite collection and no server.
+ * Both document ids double as the code you share to join, so neither an invite
+ * collection nor a server is needed.
+ *
+ * Recipes live in a cookbook rather than in a family, because several families
+ * can cook from the same library while each plans its own week and shops its
+ * own list. A family points at exactly one cookbook.
  */
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner';
@@ -105,6 +110,18 @@ export interface Recipe {
 
 /** A recipe on its way to Firestore — no id yet. */
 export type NewRecipe = Omit<Recipe, 'id'>;
+
+/**
+ * A recipe library shared by one or more families.
+ *
+ * `families` holds family ids, not uids, so that everyone in a family sees the
+ * same library — including someone who joins the family later, without having
+ * to be added here as well.
+ */
+export interface Cookbook {
+  name: string;
+  families: string[];
+}
 
 // ─── The week ───────────────────────────────────────────────────────
 

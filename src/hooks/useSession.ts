@@ -17,6 +17,8 @@ export interface Session {
   status: SessionStatus;
   user: User | null;
   familyId: string;
+  /** The recipe library this family cooks from. '' until the family doc loads. */
+  cookbookId: string;
 }
 
 export function useSession(): Session {
@@ -24,6 +26,7 @@ export function useSession(): Session {
   const [authReady, setAuthReady] = useState(false);
   const [familyId, setFamilyId] = useState('');
   const [familyReady, setFamilyReady] = useState(false);
+  const [cookbookId, setCookbookId] = useState('');
 
   useEffect(
     // Fires immediately with the cached session, or null.
@@ -54,6 +57,18 @@ export function useSession(): Session {
     );
   }, [user]);
 
+  // Which cookbook the family cooks from. Live, so joining another one takes
+  // effect without a reload.
+  useEffect(() => {
+    if (!familyId) {
+      setCookbookId('');
+      return;
+    }
+    return onSnapshot(doc(db, 'families', familyId), (snap) => {
+      setCookbookId(snap.data()?.cookbookId ?? '');
+    });
+  }, [familyId]);
+
   const status: SessionStatus = !authReady
     ? 'loading'
     : !user
@@ -64,12 +79,13 @@ export function useSession(): Session {
           ? 'ready'
           : 'no-family';
 
-  return { status, user, familyId };
+  return { status, user, familyId, cookbookId };
 }
 
 export interface Family {
   name: string;
   members: string[];
+  cookbookId: string;
 }
 
 /** The family document — its name, and who is in it. */
@@ -81,7 +97,15 @@ export function useFamily(familyId: string) {
 
     return onSnapshot(doc(db, 'families', familyId), (snap) => {
       const data = snap.data();
-      setFamily(data ? { name: data.name ?? '', members: data.members ?? [] } : null);
+      setFamily(
+        data
+          ? {
+              name: data.name ?? '',
+              members: data.members ?? [],
+              cookbookId: data.cookbookId ?? '',
+            }
+          : null
+      );
     });
   }, [familyId]);
 
@@ -107,17 +131,57 @@ export function normalizeCode(raw: string): string {
   return raw.trim().toUpperCase();
 }
 
-/** Creates a family with a fresh code and points the user at it. */
+/**
+ * Creates a family with a fresh code, gives it a cookbook of its own, and
+ * points the user at both.
+ *
+ * The order matters: the family and the user document must exist before the
+ * cookbook, because the cookbook's rules verify the caller really is in the
+ * family they claim.
+ */
 export async function createFamily(uid: string, name: string): Promise<string> {
   const code = generateFamilyCode();
+  const trimmed = name.trim() || 'My Family';
 
-  await setDoc(doc(db, 'families', code), {
-    name: name.trim() || 'My Family',
-    members: [uid],
-  });
+  await setDoc(doc(db, 'families', code), { name: trimmed, members: [uid] });
   await setDoc(doc(db, 'users', uid), { familyId: code });
 
+  const cookbookId = generateFamilyCode();
+  await setDoc(doc(db, 'cookbooks', cookbookId), {
+    name: `${trimmed} recipes`,
+    families: [code],
+  });
+  await setDoc(doc(db, 'families', code), { cookbookId }, { merge: true });
+
   return code;
+}
+
+/**
+ * Joins an existing cookbook by its code, so this family cooks from the same
+ * library as the families already on it.
+ *
+ * Blind write, like joining a family: a wrong code targets a document that
+ * doesn't exist and the update fails.
+ */
+export async function joinCookbook(
+  familyId: string,
+  rawCode: string
+): Promise<void> {
+  const code = normalizeCode(rawCode);
+  if (!code) throw new Error('Enter the cookbook code.');
+
+  try {
+    await updateDoc(doc(db, 'cookbooks', code), { families: arrayUnion(familyId) });
+  } catch {
+    throw new Error("That code didn't work. Check it and try again.");
+  }
+
+  await setDoc(doc(db, 'families', familyId), { cookbookId: code }, { merge: true });
+}
+
+/** Renames the shared cookbook. */
+export function renameCookbook(cookbookId: string, name: string) {
+  return setDoc(doc(db, 'cookbooks', cookbookId), { name: name.trim() }, { merge: true });
 }
 
 /**
