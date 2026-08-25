@@ -22,3 +22,6 @@ service-account*.json
 
 # playwright artefacts from scripts/e2e.cjs
 e2e-*.png
+
+# local data dumps from scripts/purge-old-recipes.cjs
+recipes-backup-*.json
