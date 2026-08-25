@@ -17,6 +17,8 @@ export interface SlotTarget {
 interface Props {
   target: SlotTarget | null;
   recipes: Recipe[];
+  /** The library is still arriving — say so rather than looking empty. */
+  isLoadingRecipes?: boolean;
   onPick: (meal: Meal) => void;
   onViewRecipe: (recipe: Recipe) => void;
   onClose: () => void;
@@ -36,6 +38,7 @@ export function mealFromRecipe(recipe: Recipe): Meal {
 export default function MealPicker({
   target,
   recipes,
+  isLoadingRecipes = false,
   onPick,
   onViewRecipe,
   onClose,
@@ -102,6 +105,24 @@ export default function MealPicker({
           shopping list.
         </p>
       </div>
+
+      {/* Recipes live in the shared cookbook, which is resolved through the
+          family document, so they can land a moment after the sheet opens.
+          An empty list and a list still loading must not look the same. */}
+      {isLoadingRecipes && forThisSlot.length === 0 && (
+        <div className="empty">
+          <p className="t-sec">Finding your recipes…</p>
+        </div>
+      )}
+
+      {!isLoadingRecipes && forThisSlot.length === 0 && (
+        <div className="empty">
+          <p className="t-sec">
+            No {MEAL_TYPE_LABELS[target.mealType].toLowerCase()} recipes in your
+            cookbook yet — type a meal above, or add one from the Recipes tab.
+          </p>
+        </div>
+      )}
 
       {forThisSlot.length > 0 && (
         <>

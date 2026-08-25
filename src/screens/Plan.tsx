@@ -196,6 +196,7 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
       <MealPicker
         target={target}
         recipes={recipes.recipes}
+        isLoadingRecipes={recipes.isLoading}
         onPick={pick}
         onViewRecipe={setOpenRecipe}
         onClose={() => setTarget(null)}

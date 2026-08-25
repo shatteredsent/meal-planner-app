@@ -93,6 +93,15 @@ const NL = String.fromCharCode(10);
     .waitFor({ timeout: 60000 })
     .catch(() => bail('Plan screen'));
   console.log('reached Plan screen after ' + (Date.now() - t0) + 'ms' + NL);
+  // Recipes resolve through users -> families -> cookbooks, so they land after
+  // the first paint. Wait for the library before judging what a picker shows.
+  await page.waitForFunction(
+    () => {
+      const t = document.querySelector('.tab:nth-child(4) .tab-meta');
+      return t && t.textContent && t.textContent.trim() !== '0';
+    },
+    { timeout: 15000 }
+  ).catch(() => console.log('(library still empty after 15s)'));
   const recipeCount = await page.evaluate(() => {
     const t = document.querySelector('.tab:nth-child(4) .tab-meta');
     return t ? t.textContent : '?';
