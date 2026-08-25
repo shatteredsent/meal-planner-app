@@ -77,6 +77,9 @@ export default function RecipeForm({ isOpen, onSave, onClose }: Props) {
           aria-label="Description"
         />
 
+        <p className="t-sec-sm">
+          Usually eaten at — a hint only. Every recipe can fill any slot.
+        </p>
         <div className="seg">
           {MEAL_TYPES.map((type) => (
             <button

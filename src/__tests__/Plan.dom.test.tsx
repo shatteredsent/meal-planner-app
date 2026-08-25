@@ -118,14 +118,41 @@ describe('Plan', () => {
     expect(screen.getByText('Adobo')).toBeTruthy();
   });
 
-  it('offers no recipes for a slot none are tagged for, but still opens', () => {
+  it('offers every recipe for a slot none are tagged for', () => {
     renderPlan(weekApi(), recipesApi([dinner]));
 
     fireEvent.click(screen.getByText(/choose breakfast/i));
 
-    // The picker must still open — typing a meal is always available.
+    // A dinner recipe is still a perfectly good breakfast.
     expect(screen.queryByText(/what are we having/i)).toBeTruthy();
-    expect(screen.queryByText('Adobo')).toBeNull();
+    expect(screen.getByText('Adobo')).toBeTruthy();
+    expect(screen.getByText(/from your cookbook/i)).toBeTruthy();
+  });
+
+  it('puts the recipes suited to the slot first, and the rest after', () => {
+    const breakfast = { ...dinner, id: 'r2', name: 'Pancakes', mealType: 'breakfast' as const };
+    renderPlan(weekApi(), recipesApi([dinner, breakfast]));
+
+    fireEvent.click(screen.getByText(/choose breakfast/i));
+
+    expect(screen.getByText(/good for breakfast/i)).toBeTruthy();
+    expect(screen.getByText(/anything else/i)).toBeTruthy();
+
+    const names = screen.getAllByText(/Pancakes|Adobo/).map((n) => n.textContent);
+    expect(names.indexOf('Pancakes')).toBeLessThan(names.indexOf('Adobo'));
+  });
+
+  it('can plan a breakfast recipe into the dinner slot', () => {
+    const breakfast = { ...dinner, id: 'r2', name: 'Pancakes', mealType: 'breakfast' as const };
+    const week = weekApi();
+    renderPlan(week, recipesApi([breakfast]));
+
+    fireEvent.click(screen.getByText(/choose dinner/i));
+    fireEvent.click(screen.getByText('Pancakes'));
+
+    const [, mealType, meal] = (week.setMeal as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(mealType).toBe('dinner');
+    expect(meal.name).toBe('Pancakes');
   });
 
   it('closes again on Close, leaving no overlay behind', () => {

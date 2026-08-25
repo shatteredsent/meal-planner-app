@@ -51,6 +51,13 @@ export default function Recipes({ recipes }: { recipes: RecipesApi }) {
       />
 
       <div className="scroll">
+        <div className="empty">
+          <p className="t-sec">
+            Grouped by when you'd usually eat them. Any recipe can go in any
+            slot, so breakfast for dinner is one tap away.
+          </p>
+        </div>
+
         {recipes.recipes.length === 0 ? (
           <div className="empty">
             <p className="t-body">

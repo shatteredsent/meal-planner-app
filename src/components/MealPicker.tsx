@@ -35,6 +35,42 @@ export function mealFromRecipe(recipe: Recipe): Meal {
   };
 }
 
+function RecipeList({
+  label,
+  recipes,
+  onPick,
+  onViewRecipe,
+}: {
+  label: string;
+  recipes: Recipe[];
+  onPick: (meal: Meal) => void;
+  onViewRecipe: (recipe: Recipe) => void;
+}) {
+  return (
+    <>
+      <GroupHead label={label} meta={String(recipes.length)} ruleAbove />
+      <ul>
+        {recipes.map((recipe) => (
+          <li key={recipe.id} className="picker-row">
+            <button className="picker-pick" onClick={() => onPick(mealFromRecipe(recipe))}>
+              <span className="t-meal-sm">{recipe.name}</span>
+              {recipe.subtitle && <span className="t-sec">{recipe.subtitle}</span>}
+              {recipe.prepTime && <span className="t-meta">{recipe.prepTime}</span>}
+            </button>
+            <button
+              className="picker-view t-meta"
+              onClick={() => onViewRecipe(recipe)}
+              aria-label={`View ${recipe.name}`}
+            >
+              View
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export default function MealPicker({
   target,
   recipes,
@@ -56,7 +92,11 @@ export default function MealPicker({
 
   if (!target) return null;
 
-  const forThisSlot = recipes.filter((r) => r.mealType === target.mealType);
+  // Every recipe can fill any slot — bacon and eggs for dinner is a real
+  // dinner. `mealType` is only a hint about where a recipe usually goes, so the
+  // ones suited to this slot come first and the rest follow.
+  const suggested = recipes.filter((r) => r.mealType === target.mealType);
+  const others = recipes.filter((r) => r.mealType !== target.mealType);
 
   function saveTyped() {
     const trimmed = name.trim();
@@ -109,51 +149,39 @@ export default function MealPicker({
       {/* Recipes live in the shared cookbook, which is resolved through the
           family document, so they can land a moment after the sheet opens.
           An empty list and a list still loading must not look the same. */}
-      {isLoadingRecipes && forThisSlot.length === 0 && (
+      {isLoadingRecipes && recipes.length === 0 && (
         <div className="empty">
           <p className="t-sec">Finding your recipes…</p>
         </div>
       )}
 
-      {!isLoadingRecipes && forThisSlot.length === 0 && (
+      {!isLoadingRecipes && recipes.length === 0 && (
         <div className="empty">
           <p className="t-sec">
-            No {MEAL_TYPE_LABELS[target.mealType].toLowerCase()} recipes in your
-            cookbook yet — type a meal above, or add one from the Recipes tab.
+            No recipes in your cookbook yet — type a meal above, or add one from
+            the Recipes tab.
           </p>
         </div>
       )}
 
-      {forThisSlot.length > 0 && (
-        <>
-          <GroupHead
-            label={`From your ${MEAL_TYPE_LABELS[target.mealType].toLowerCase()} recipes`}
-            meta={String(forThisSlot.length)}
-            ruleAbove
-          />
-          <ul>
-            {forThisSlot.map((recipe) => (
-              <li key={recipe.id} className="picker-row">
-                <button
-                  className="picker-pick"
-                  onClick={() => onPick(mealFromRecipe(recipe))}
-                >
-                  <span className="t-meal-sm">{recipe.name}</span>
-                  {recipe.subtitle && <span className="t-sec">{recipe.subtitle}</span>}
-                  {recipe.prepTime && <span className="t-meta">{recipe.prepTime}</span>}
-                </button>
-                <button
-                  className="picker-view t-meta"
-                  onClick={() => onViewRecipe(recipe)}
-                  aria-label={`View ${recipe.name}`}
-                >
-                  View
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
+      {suggested.length > 0 && (
+        <RecipeList
+          label={`Good for ${MEAL_TYPE_LABELS[target.mealType].toLowerCase()}`}
+          recipes={suggested}
+          onPick={onPick}
+          onViewRecipe={onViewRecipe}
+        />
       )}
+
+      {others.length > 0 && (
+        <RecipeList
+          label={suggested.length > 0 ? 'Anything else' : 'From your cookbook'}
+          recipes={others}
+          onPick={onPick}
+          onViewRecipe={onViewRecipe}
+        />
+      )}
+
     </Sheet>
   );
 }
