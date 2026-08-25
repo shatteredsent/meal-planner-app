@@ -220,3 +220,58 @@ export function Loading() {
     </div>
   );
 }
+
+interface WeekNavProps {
+  label: string;
+  /** Weeks away from the current one. 0 is this week. */
+  offset: number;
+  onShift: (by: number) => void;
+  onReset: () => void;
+}
+
+/**
+ * Step between weeks.
+ *
+ * The app used to be pinned to the current week, which made Sunday a dead end —
+ * the week was over and there was no way to reach the next one.
+ */
+export function WeekNav({ label, offset, onShift, onReset }: WeekNavProps) {
+  const relative =
+    offset === 0 ? 'This week'
+      : offset === 1 ? 'Next week'
+        : offset === -1 ? 'Last week'
+          : offset > 0 ? `In ${offset} weeks`
+            : `${Math.abs(offset)} weeks ago`;
+
+  return (
+    <div className="week-nav">
+      <button
+        className="week-step"
+        onClick={() => onShift(-1)}
+        aria-label="Previous week"
+        title="Previous week"
+      >
+        ‹
+      </button>
+
+      <button
+        className="week-now"
+        onClick={onReset}
+        disabled={offset === 0}
+        title={offset === 0 ? undefined : 'Back to this week'}
+      >
+        <span className="t-label week-now-rel">{relative}</span>
+        <span className="t-meta">{label}</span>
+      </button>
+
+      <button
+        className="week-step"
+        onClick={() => onShift(1)}
+        aria-label="Next week"
+        title="Next week"
+      >
+        ›
+      </button>
+    </div>
+  );
+}

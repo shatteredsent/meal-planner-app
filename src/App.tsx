@@ -15,6 +15,7 @@ import { useSession } from './hooks/useSession';
 import { useWeek } from './hooks/useWeek';
 import { useRecipes } from './hooks/useRecipes';
 import { buildList, countLines } from './lib/shoppingList';
+import { addWeeks, getWeekDates, getWeekId } from './lib/week';
 import { Loading } from './components/ui';
 import type { SlotTarget } from './components/MealPicker';
 import Login from './screens/Login';
@@ -71,11 +72,21 @@ function Signed({
   familyId: string;
   session: ReturnType<typeof useSession>;
 }) {
-  const week = useWeek(familyId);
+  // Which week every screen is looking at. Held here rather than per-screen so
+  // Plan, List and Week can never disagree about which week they mean.
+  const [weekOffset, setWeekOffset] = useState(0);
+  const anchor = useMemo(() => addWeeks(new Date(), weekOffset), [weekOffset]);
+  const weekId = useMemo(() => getWeekId(anchor), [anchor]);
+  const weekDates = useMemo(() => getWeekDates(anchor), [anchor]);
+
+  const week = useWeek(familyId, weekId);
   const recipes = useRecipes(session.cookbookId);
 
   const [view, setView] = useState<View>('plan');
   const [focus, setFocus] = useState<SlotTarget | null>(null);
+
+  const shiftWeek = useCallback((by: number) => setWeekOffset((n) => n + by), []);
+  const resetWeek = useCallback(() => setWeekOffset(0), []);
 
   const clearFocus = useCallback(() => setFocus(null), []);
 
@@ -116,7 +127,7 @@ function Signed({
   const filled = Object.keys(week.week.meals).length;
 
   const metas: Record<string, string> = {
-    plan: 'pick meals',
+    plan: weekOffset === 0 ? 'pick meals' : 'other week',
     list: `${counts.toBuy} to buy`,
     week: `${filled}/${TOTAL_SLOTS}`,
     recipes: `${recipes.recipes.length}`,
@@ -131,15 +142,36 @@ function Signed({
   return (
     <div className="app">
       {view === 'plan' && (
-        <Plan week={week} recipes={recipes} focus={focus} onFocusHandled={clearFocus} />
+        <Plan
+          week={week}
+          recipes={recipes}
+          focus={focus}
+          onFocusHandled={clearFocus}
+          weekDates={weekDates}
+          weekOffset={weekOffset}
+          onShiftWeek={shiftWeek}
+          onResetWeek={resetWeek}
+        />
       )}
-      {view === 'list' && <List week={week} />}
+      {view === 'list' && (
+        <List
+          week={week}
+          weekDates={weekDates}
+          weekOffset={weekOffset}
+          onShiftWeek={shiftWeek}
+          onResetWeek={resetWeek}
+        />
+      )}
       {view === 'week' && (
         <Week
           week={week}
           onOpenSlot={openSlot}
           onOpenList={() => go('list')}
           onOpenSettings={() => go('settings')}
+          weekDates={weekDates}
+          weekOffset={weekOffset}
+          onShiftWeek={shiftWeek}
+          onResetWeek={resetWeek}
         />
       )}
       {view === 'recipes' && <Recipes recipes={recipes} />}

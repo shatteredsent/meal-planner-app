@@ -5,18 +5,23 @@
  * selects that day and opens its picker.
  */
 
-import { useMemo } from 'react';
 import { DAYS, MEAL_TYPES, MEAL_TYPE_LABELS, TOTAL_SLOTS } from '../types';
 import type { MealType } from '../types';
 import type { WeekApi } from '../hooks/useWeek';
-import { formatWeekDayLabel, getWeekDates, weekdayIndex } from '../lib/week';
-import { Button, ErrorState, Header } from '../components/ui';
+import { formatWeekDayLabel, formatWeekRange, weekdayIndex } from '../lib/week';
+import { Button, ErrorState, Header, WeekNav } from '../components/ui';
 
 interface Props {
   week: WeekApi;
   onOpenSlot: (day: string, mealType: MealType) => void;
   onOpenSettings: () => void;
   onOpenList: () => void;
+  /** Mon–Sun of the week being viewed. */
+  weekDates: Date[];
+  /** Weeks away from the current one. 0 is this week. */
+  weekOffset: number;
+  onShiftWeek: (by: number) => void;
+  onResetWeek: () => void;
 }
 
 function nudgeFor(filled: number): string {
@@ -30,9 +35,13 @@ export default function Week({
   onOpenSlot,
   onOpenSettings,
   onOpenList,
+  weekDates,
+  weekOffset,
+  onShiftWeek,
+  onResetWeek,
 }: Props) {
-  const weekDates = useMemo(() => getWeekDates(new Date()), []);
-  const todayIndex = weekdayIndex(new Date());
+  // Another week has no "today" in it to mark.
+  const todayIndex = weekOffset === 0 ? weekdayIndex(new Date()) : -1;
 
   // Deliberately not blocked on isLoading. An empty week renders perfectly
   // well, and waiting on the listen stream can take tens of seconds on a cold
@@ -58,13 +67,19 @@ export default function Week({
   return (
     <>
       <Header
-        kicker="This week"
+        kicker={`${TOTAL_SLOTS} slots`}
         meta={`${filled}/${TOTAL_SLOTS}`}
         title="The week"
         syncing={week.isLoading}
       />
 
       <div className="scroll">
+        <WeekNav
+          label={formatWeekRange(weekDates)}
+          offset={weekOffset}
+          onShift={onShiftWeek}
+          onReset={onResetWeek}
+        />
         <div className="week-summary">
           <span className="t-stat">{filled}</span>
           <span className="t-sec-sm">

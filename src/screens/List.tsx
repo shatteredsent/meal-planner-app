@@ -19,9 +19,26 @@ import {
 } from '../lib/shoppingList';
 import type { Group } from '../lib/shoppingList';
 import { formatDays, formatQuantity } from '../lib/quantity';
-import { Button, ErrorState, GroupHead, Header } from '../components/ui';
+import { Button, ErrorState, GroupHead, Header, WeekNav } from '../components/ui';
+import { formatWeekRange } from '../lib/week';
 
-export default function List({ week }: { week: WeekApi }) {
+interface Props {
+  week: WeekApi;
+  /** Mon–Sun of the week being viewed. */
+  weekDates: Date[];
+  /** Weeks away from the current one. 0 is this week. */
+  weekOffset: number;
+  onShiftWeek: (by: number) => void;
+  onResetWeek: () => void;
+}
+
+export default function List({
+  week,
+  weekDates,
+  weekOffset,
+  onShiftWeek,
+  onResetWeek,
+}: Props) {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('');
   const nameField = useRef<HTMLInputElement>(null);
@@ -95,6 +112,12 @@ export default function List({ week }: { week: WeekApi }) {
       />
 
       <div className="scroll">
+        <WeekNav
+          label={formatWeekRange(weekDates)}
+          offset={weekOffset}
+          onShift={onShiftWeek}
+          onReset={onResetWeek}
+        />
         <div className="stat-bar">
           <div className="stat-cell is-tobuy">
             <p className="t-stat">{counts.toBuy}</p>

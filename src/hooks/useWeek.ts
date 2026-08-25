@@ -1,5 +1,10 @@
 /**
- * This week's plan and list state — one Firestore document.
+ * One week's plan and list state — one Firestore document.
+ *
+ * Which week is the caller's decision, not this hook's. It used to pin itself
+ * to `new Date()`, which meant the app could only ever show the current week —
+ * so on a Sunday you were looking at a week that was over with no way to plan
+ * the next one.
  *
  * Every write is a merging `setDoc`, which means writes to different slots merge
  * instead of clobbering each other (two people can fill Monday and Thursday at
@@ -7,7 +12,7 @@
  * check anywhere.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   arrayRemove,
   arrayUnion,
@@ -20,7 +25,6 @@ import {
 import { db } from '../firebase';
 import { EMPTY_WEEK, slotKey } from '../types';
 import type { Extra, Meal, MealType, Week } from '../types';
-import { getWeekId } from '../lib/week';
 import { manualKey, staleKeys } from '../lib/shoppingList';
 
 export interface WeekApi {
@@ -49,12 +53,10 @@ function sameName(extras: Extra[], name: string): Extra[] {
   return extras.filter((e) => e.name.toLowerCase().trim() === target);
 }
 
-export function useWeek(familyId: string): WeekApi {
+export function useWeek(familyId: string, weekId: string): WeekApi {
   const [week, setWeek] = useState<Week>(EMPTY_WEEK);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-
-  const weekId = useMemo(() => getWeekId(new Date()), []);
 
   useEffect(() => {
     if (!familyId) return;

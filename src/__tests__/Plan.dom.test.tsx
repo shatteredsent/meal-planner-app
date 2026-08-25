@@ -14,6 +14,7 @@ import Plan from '../screens/Plan';
 import type { WeekApi } from '../hooks/useWeek';
 import type { RecipesApi } from '../hooks/useRecipes';
 import { EMPTY_WEEK, slotKey } from '../types';
+import { addWeeks, getWeekDates, getWeekId } from '../lib/week';
 import type { Meal, Recipe } from '../types';
 
 function weekApi(meals: Record<string, Meal> = {}): WeekApi {
@@ -55,9 +56,29 @@ const dinner: Recipe = {
   steps: [],
 };
 
-function renderPlan(week = weekApi(), recipes = recipesApi()) {
+const WEEK_DATES = getWeekDates(new Date(2026, 7, 26)); // Mon 24 – Sun 30 Aug
+
+function renderPlan(
+  week = weekApi(),
+  recipes = recipesApi(),
+  weekProps: Partial<{
+    weekDates: Date[];
+    weekOffset: number;
+    onShiftWeek: (by: number) => void;
+    onResetWeek: () => void;
+  }> = {}
+) {
   return render(
-    <Plan week={week} recipes={recipes} focus={null} onFocusHandled={vi.fn()} />
+    <Plan
+      week={week}
+      recipes={recipes}
+      focus={null}
+      onFocusHandled={vi.fn()}
+      weekDates={weekProps.weekDates ?? WEEK_DATES}
+      weekOffset={weekProps.weekOffset ?? 0}
+      onShiftWeek={weekProps.onShiftWeek ?? vi.fn()}
+      onResetWeek={weekProps.onResetWeek ?? vi.fn()}
+    />
   );
 }
 
@@ -146,5 +167,96 @@ describe('Plan', () => {
 
     expect(screen.getByText('Jambalaya')).toBeTruthy();
     expect(screen.queryByText(/choose dinner/i)).toBeNull();
+  });
+});
+
+
+/**
+ * The app used to pin itself to the current week, so on a Sunday you were
+ * looking at a week that was over with no way to reach the next one.
+ */
+describe('moving between weeks', () => {
+  it('offers a way forward and back', () => {
+    renderPlan();
+
+    expect(screen.getByLabelText(/previous week/i)).toBeTruthy();
+    expect(screen.getByLabelText(/next week/i)).toBeTruthy();
+  });
+
+  it('steps forward a week', () => {
+    const onShiftWeek = vi.fn();
+    renderPlan(weekApi(), recipesApi(), { onShiftWeek });
+
+    fireEvent.click(screen.getByLabelText(/next week/i));
+
+    expect(onShiftWeek).toHaveBeenCalledWith(1);
+  });
+
+  it('steps back a week', () => {
+    const onShiftWeek = vi.fn();
+    renderPlan(weekApi(), recipesApi(), { onShiftWeek });
+
+    fireEvent.click(screen.getByLabelText(/previous week/i));
+
+    expect(onShiftWeek).toHaveBeenCalledWith(-1);
+  });
+
+  it('names the week you are on', () => {
+    renderPlan(weekApi(), recipesApi(), { weekOffset: 0 });
+    expect(screen.getByText('This week')).toBeTruthy();
+
+    cleanup();
+    renderPlan(weekApi(), recipesApi(), { weekOffset: 1 });
+    expect(screen.getByText('Next week')).toBeTruthy();
+
+    cleanup();
+    renderPlan(weekApi(), recipesApi(), { weekOffset: -1 });
+    expect(screen.getByText('Last week')).toBeTruthy();
+
+    cleanup();
+    renderPlan(weekApi(), recipesApi(), { weekOffset: 3 });
+    expect(screen.getByText('In 3 weeks')).toBeTruthy();
+  });
+
+  it('offers a way back to this week only when you have left it', () => {
+    renderPlan(weekApi(), recipesApi(), { weekOffset: 0 });
+    expect(screen.getByText('This week').closest('button')?.disabled).toBe(true);
+
+    cleanup();
+    const onResetWeek = vi.fn();
+    renderPlan(weekApi(), recipesApi(), { weekOffset: 2, onResetWeek });
+    fireEvent.click(screen.getByText('In 2 weeks'));
+    expect(onResetWeek).toHaveBeenCalled();
+  });
+
+  it('shows the dates of the week being viewed, not always today', () => {
+    const next = getWeekDates(addWeeks(new Date(2026, 7, 26), 1)); // Mon 31 Aug
+    renderPlan(weekApi(), recipesApi(), { weekDates: next, weekOffset: 1 });
+
+    expect(screen.getByText('31')).toBeTruthy();
+  });
+});
+
+describe('week ids', () => {
+  it('a Sunday and the following Monday are different weeks', () => {
+    const sunday = new Date(2026, 7, 30);
+    const monday = new Date(2026, 7, 31);
+
+    expect(getWeekId(sunday)).not.toBe(getWeekId(monday));
+  });
+
+  it('stepping forward from a Sunday reaches the next week', () => {
+    const sunday = new Date(2026, 7, 30);
+
+    expect(getWeekId(addWeeks(sunday, 1))).toBe(getWeekId(new Date(2026, 8, 1)));
+  });
+
+  it('stepping back and forward returns to where it started', () => {
+    const d = new Date(2026, 7, 26);
+    expect(getWeekId(addWeeks(addWeeks(d, -3), 3))).toBe(getWeekId(d));
+  });
+
+  it('steps across a month boundary', () => {
+    expect(getWeekId(addWeeks(new Date(2026, 7, 26), 1))).toBe('2026-08-31');
   });
 });

@@ -5,13 +5,13 @@
  * to how full the day is.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DAYS, MEAL_TYPES, MEAL_TYPE_LABELS } from '../types';
 import type { Meal, MealType, Recipe } from '../types';
 import type { WeekApi } from '../hooks/useWeek';
 import type { RecipesApi } from '../hooks/useRecipes';
-import { formatWeekRange, getWeekDates, weekdayIndex } from '../lib/week';
-import { Button, ErrorState, Header } from '../components/ui';
+import { formatDayAndMonth, formatWeekRange, weekdayIndex } from '../lib/week';
+import { Button, ErrorState, Header, WeekNav } from '../components/ui';
 import MealPicker, { mealFromRecipe } from '../components/MealPicker';
 import type { SlotTarget } from '../components/MealPicker';
 import RecipeDetail from '../components/RecipeDetail';
@@ -22,6 +22,12 @@ interface Props {
   /** Set when arriving from the Week screen: select this day and open its picker. */
   focus: SlotTarget | null;
   onFocusHandled: () => void;
+  /** Mon–Sun of the week being viewed. */
+  weekDates: Date[];
+  /** Weeks away from the current one. 0 is this week. */
+  weekOffset: number;
+  onShiftWeek: (by: number) => void;
+  onResetWeek: () => void;
 }
 
 function nudgeFor(empty: number): string {
@@ -32,13 +38,30 @@ function nudgeFor(empty: number): string {
   return 'Two of three down. Fill the last slot or borrow from the day before.';
 }
 
-export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
+export default function Plan({
+  week,
+  recipes,
+  focus,
+  onFocusHandled,
+  weekDates,
+  weekOffset,
+  onShiftWeek,
+  onResetWeek,
+}: Props) {
   const [dayIndex, setDayIndex] = useState(() => weekdayIndex(new Date()));
   const [target, setTarget] = useState<SlotTarget | null>(null);
   const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
 
-  const weekDates = useMemo(() => getWeekDates(new Date()), []);
-  const todayIndex = weekdayIndex(new Date());
+  // Only the current week has a "today" to highlight or land on.
+  const isThisWeek = weekOffset === 0;
+  const todayIndex = isThisWeek ? weekdayIndex(new Date()) : -1;
+
+  // Changing week lands on today if it's this week, Monday otherwise — rather
+  // than keeping a day index that meant something in a different week.
+  useEffect(() => {
+    setDayIndex(isThisWeek ? weekdayIndex(new Date()) : 0);
+    setTarget(null);
+  }, [weekOffset, isThisWeek]);
 
   // A hand-off from the Week screen: select that day and open its picker, then
   // clear the request so it doesn't reopen on every later render.
@@ -109,13 +132,19 @@ export default function Plan({ week, recipes, focus, onFocusHandled }: Props) {
   return (
     <>
       <Header
-        kicker={formatWeekRange(weekDates)}
+        kicker={formatDayAndMonth(weekDates[dayIndex])}
         meta={`${3 - empty}/3 chosen`}
         title={day}
         syncing={week.isLoading}
       />
 
       <div className="scroll">
+        <WeekNav
+          label={formatWeekRange(weekDates)}
+          offset={weekOffset}
+          onShift={onShiftWeek}
+          onReset={onResetWeek}
+        />
         <div className="day-strip">
           {DAYS.map((name, index) => {
             const filled = MEAL_TYPES.filter((t) => week.mealAt(name, t)).length;

@@ -842,3 +842,46 @@ textarea.input { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 
 /* Data still arriving. A quiet note in the header, never a blocking screen. */
 .syncing { color: var(--accent-deep); }
+
+/* ─── Week navigation ─────────────────────────────────────────────*/
+
+.week-nav {
+  display: grid;
+  grid-template-columns: 46px 1fr 46px;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px var(--gutter) 0;
+}
+
+.week-step {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  border: var(--rule) solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--accent-deep);
+  transition: background-color 120ms ease;
+}
+
+.week-step:hover { background: var(--accent-tint); }
+
+.week-now {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: var(--rule) solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--card);
+}
+
+/* Off the current week, the label becomes a way back to it. */
+.week-now:not(:disabled) { border-color: var(--accent); background: var(--accent-tint); }
+.week-now:not(:disabled) .week-now-rel { color: var(--accent-deep); }
+.week-now:disabled { cursor: default; }

@@ -20,6 +20,13 @@ export function getWeekStart(date: Date): Date {
   return start;
 }
 
+/** The same weekday `n` weeks away. Negative goes back. */
+export function addWeeks(date: Date, n: number): Date {
+  const shifted = new Date(date);
+  shifted.setDate(shifted.getDate() + n * 7);
+  return shifted;
+}
+
 /** Mon–Sun of the week containing `date`. */
 export function getWeekDates(date: Date): Date[] {
   const start = getWeekStart(date);
