@@ -888,3 +888,6 @@ textarea.input { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 
 /* Picker rows sit in the same card as the shopping list's aisles. */
 .aisle-body > .picker-row:first-child { border-top: 0; }
+
+/* A caution, not an error — the action is still allowed. */
+.warn { color: var(--bakery-ink); }

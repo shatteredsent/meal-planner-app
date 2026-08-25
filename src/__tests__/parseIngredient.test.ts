@@ -97,3 +97,22 @@ describe('parseQuantity', () => {
     expect(parseQuantity('3 bananas')).toEqual({ amount: 3, unit: '' });
   });
 });
+
+describe('categorising meat cuts', () => {
+  it('puts common cuts in the meat aisle', () => {
+    for (const cut of [
+      'chuck roast', 'sirloin', 'pork tenderloin', 'pot roast',
+      'meatballs', 'chicken drumsticks', 'chicken wings', 'chorizo',
+    ]) {
+      expect(parseIngredient(`2 lb ${cut}`).category).toBe('Meat & Seafood');
+    }
+  });
+
+  it('does not drag produce into the meat aisle', () => {
+    // 'roast' and 'chop' are deliberately absent as bare keywords: meat is
+    // matched before produce, so a bare 'roast' would capture these.
+    expect(parseIngredient('2 roasted red peppers').category).toBe('Produce');
+    expect(parseIngredient('1 can chopped tomatoes').category).not.toBe('Meat & Seafood');
+    expect(parseIngredient('1 lb roasted potatoes').category).toBe('Produce');
+  });
+});

@@ -11,11 +11,18 @@ import { Button, Sheet } from './ui';
 
 interface Props {
   isOpen: boolean;
+  /** Names already in the cookbook, so a duplicate can be pointed out. */
+  existingNames?: string[];
   onSave: (recipe: NewRecipe) => Promise<void>;
   onClose: () => void;
 }
 
-export default function RecipeForm({ isOpen, onSave, onClose }: Props) {
+export default function RecipeForm({
+  isOpen,
+  existingNames = [],
+  onSave,
+  onClose,
+}: Props) {
   const [name, setName] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [prepTime, setPrepTime] = useState('');
@@ -34,6 +41,13 @@ export default function RecipeForm({ isOpen, onSave, onClose }: Props) {
     setIngredientText('');
     setStepText('');
   }
+
+  // Three recipes ended up in the library twice because nothing here knew what
+  // was already in it. Saving a duplicate is still allowed — two households may
+  // genuinely want their own version — but it has to be deliberate.
+  const isDuplicate = existingNames.some(
+    (n) => n.toLowerCase().trim() === name.toLowerCase().trim()
+  ) && name.trim().length > 0;
 
   async function save() {
     if (!name.trim()) return;
@@ -129,8 +143,15 @@ export default function RecipeForm({ isOpen, onSave, onClose }: Props) {
           aria-label="Method"
         />
 
+        {isDuplicate && (
+          <p className="t-sec-sm warn">
+            Your cookbook already has a recipe called “{name.trim()}”. Saving
+            adds a second one.
+          </p>
+        )}
+
         <Button
-          label={isSaving ? 'Saving…' : 'Save recipe'}
+          label={isSaving ? 'Saving…' : isDuplicate ? 'Save anyway' : 'Save recipe'}
           variant="accent"
           onClick={save}
           disabled={isSaving || !name.trim()}

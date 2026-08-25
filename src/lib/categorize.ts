@@ -22,6 +22,12 @@ const KEYWORDS: Record<Category, string[]> = {
     'thigh', 'breast', 'salmon', 'tuna', 'shrimp', 'tilapia', 'cod', 'fish',
     'fillet', 'seafood', 'crab', 'lobster', 'scallop', 'pepperoni',
     'prosciutto', 'salami',
+    // Cuts, which are how people actually write a shopping list. Kept
+    // unambiguous on purpose: a bare 'roast' or 'chop' would swallow
+    // 'roasted peppers' and 'chopped tomatoes', since meat is matched
+    // before produce.
+    'chuck', 'sirloin', 'tenderloin', 'pot roast', 'roast beef', 'pork loin',
+    'meatball', 'drumstick', 'wings', 'cutlet', 'veal', 'chorizo',
   ],
   'Dairy & Eggs': [
     'egg', 'milk', 'cheese', 'butter', 'cream', 'yogurt', 'sour cream',

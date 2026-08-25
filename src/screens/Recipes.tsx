@@ -98,7 +98,12 @@ export default function Recipes({ recipes }: { recipes: RecipesApi }) {
         </div>
       </div>
 
-      <RecipeForm isOpen={isAdding} onSave={save} onClose={() => setIsAdding(false)} />
+      <RecipeForm
+        isOpen={isAdding}
+        existingNames={recipes.recipes.map((r) => r.name)}
+        onSave={save}
+        onClose={() => setIsAdding(false)}
+      />
 
       {/* Opened from the library, so there is no slot to plan into. */}
       <RecipeDetail
