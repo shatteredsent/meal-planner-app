@@ -49,7 +49,9 @@ function RecipeList({
   return (
     <>
       <GroupHead label={label} meta={String(recipes.length)} ruleAbove />
-      <ul>
+      {/* Same card wrapper the list screen uses, so the rows line up with the
+          header above them instead of running full-bleed past it. */}
+      <ul className="aisle-body">
         {recipes.map((recipe) => (
           <li key={recipe.id} className="picker-row">
             <button className="picker-pick" onClick={() => onPick(mealFromRecipe(recipe))}>

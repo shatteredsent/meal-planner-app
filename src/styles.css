@@ -885,3 +885,6 @@ textarea.input { resize: vertical; font-family: var(--sans); line-height: 1.5; }
 .week-now:not(:disabled) { border-color: var(--accent); background: var(--accent-tint); }
 .week-now:not(:disabled) .week-now-rel { color: var(--accent-deep); }
 .week-now:disabled { cursor: default; }
+
+/* Picker rows sit in the same card as the shopping list's aisles. */
+.aisle-body > .picker-row:first-child { border-top: 0; }
